@@ -1,82 +1,52 @@
 """
-Measuring Mathematical Problem Solving With the MATH Dataset
-Dan Hendrycks, Collin Burns, Saurav Kadavath, Akul Arora, Steven Basart, Eric Tang, Dawn Song, Jacob Steinhardt
-https://arxiv.org/abs/2103.03874
+American Invitational Mathematics Examination
+https://artofproblemsolving.com/wiki/index.php/AIME_Problems_and_Solutions?srsltid=AfmBOooAV-AugtyUZ1yHWRj-VvKprC11HcltEZW16xBL05KmiyIYnkKt
 """
 
 import json
-import random
-import re
-import signal
 import os
 import pandas
+import random
 
 from functools import partial
-
 from typing import Optional
 
 from evals import common
-from evals.common import extract_answer, MATH_QUERY_TEMPLATE as QUERY_TEMPLATE, ANSWER_PATTERN, check_equality
-
+from evals.math_eval import QUERY_TEMPLATE, EQUALITY_TEMPLATE, check_equality, extract_boxed_answer
+from evals.grading.grader import grade_answer
 from utils.types import Eval, EvalResult, SamplerBase, SingleEvalResult
-from evals.deepscaler_rule_rm import send_deepscaler_rule_rm_request
 
 
-def timeout_handler():
-    raise TimeoutError(f"Function execution timed out")
+def check_equality(sampler: SamplerBase, expr1: str, expr2: str):
+    prompt = EQUALITY_TEMPLATE % {"expression1": expr1, "expression2": expr2}
 
-
-def send_deepscaler_rule_rm_request_with_timeout(label, answer, timeout=10):
-    signal.signal(signal.SIGALRM, timeout_handler)
-    signal.alarm(timeout)  
-    
-    try:
-        result = send_deepscaler_rule_rm_request(label, answer, None)
-        signal.alarm(0)
-        return result
-    except TimeoutError:
-        print(f"Function execution timed out after {timeout} seconds")
-        return 0
-    finally:
-        signal.alarm(0) 
-
-def process_func(sampler, equality_checker, auto_extract_answer, extractor, row: dict):
-    if auto_extract_answer:
-        prompt_messages = [dict(content=row["Question"], role="user")]
-        response_text = sampler(prompt_messages)
-        if len(response_text) > 1024:
-            response_text = response_text[-1024:]
-        if extractor:
-            extracted_answer = extract_answer(extractor, row["Question"], response_text)
+    for _ in range(3):
+        response = sampler([dict(content=prompt, role="user")])
+        if len(response) == 0:
+            continue
         else:
-            extracted_answer = extract_answer(equality_checker, row["Question"], response_text)
-    else:
-        prompt_messages = [dict(content=QUERY_TEMPLATE.format(**row), role="user")]
-        response_text = sampler(prompt_messages)
-        if len(response_text) > 1024:
-            response_text = response_text[-1024:]
-        match = re.search(ANSWER_PATTERN, response_text)
-        extracted_answer = match.group(1) if match else None
+            break
+    if len(response) == 0:
+        return 0
+    return "yes" in response.lower().strip()
 
+
+def process_func(sampler, equality_checker, row: dict):
+    prompt_messages = [dict(content=QUERY_TEMPLATE.format(Question=row["Question"]), role="user")]
+    response = sampler(prompt_messages)
+    extracted_answer = extract_boxed_answer(response)
     if extracted_answer is None:
         extracted_answer = ""
         score = 0
     else:
-        rule_based_score = send_deepscaler_rule_rm_request_with_timeout(row["Answer"], extracted_answer, timeout=10)
-        if rule_based_score == -1:
-            score = check_equality(equality_checker, row["Answer"], extracted_answer, question=row["Question"], qwq_check=True if extractor else False)
+        if grade_answer(extracted_answer, row["Answer"]):
+            score = 1
         else:
-            score = rule_based_score
+            score = check_equality(equality_checker, row["Answer"], extracted_answer)
 
-        if score is None:
-            # print("failed to check equality in MATH")
-            # return None
-            score = 0
-    
     score = float(score)
     score = score * 100
-
-    return SingleEvalResult(score=score), dict(problem=row["Question"],   response=response_text, extracted_answer=extracted_answer, label=row["Answer"], score=score)
+    return SingleEvalResult(score=score), dict(problem=row["Question"], response=response, extracted_answer=extracted_answer, label=row["Answer"], score=score)
 
 
 class AimeEval(Eval):
@@ -93,9 +63,9 @@ class AimeEval(Eval):
         extractor: SamplerBase = None
 ):
         if year == 2025:
+            examples = [json.loads(x) for x in open(os.path.join(data_dir, "aime/aime_2025_I.jsonl"))]
+        elif year == 2026:
             examples = [json.loads(x) for x in open(os.path.join(data_dir, "aime/aime_2025.jsonl"))]
-        elif year == "beyond_aime":
-            examples = [json.loads(x) for x in open(os.path.join(data_dir, "aime/beyond_aime.jsonl"))]
         else:
             df = pandas.read_csv(
                 os.path.join(data_dir, "aime/AIME_Dataset_1983_2024.csv")
@@ -118,7 +88,7 @@ class AimeEval(Eval):
         self.extractor = extractor
         
     def __call__(self, sampler: SamplerBase) -> EvalResult:
-        results = common.map_with_ordered_progress(partial(process_func, sampler, self.equality_checker, self.auto_extract_answer, self.extractor), self.examples, num_threads=self.proc_num)
+        results = common.map_with_ordered_progress(partial(process_func, sampler, self.equality_checker), self.examples, num_threads=self.proc_num)
 
         response_data = [x[1] for x in results]
         results = [x[0] for x in results]
@@ -127,7 +97,7 @@ class AimeEval(Eval):
         print(f"AIME evaluation: {len(success)} successful, {len(failed)} failed")
         
         eval_result = common.aggregate_results(success)
-        
+
         if self.n_repeats > 1:
             eval_result = common.compute_repeat_metrics(
                 success=success,
@@ -135,5 +105,5 @@ class AimeEval(Eval):
                 worst_of_n=self.worst_of_n,
                 eval_result=eval_result
             )
-        
+
         return eval_result, response_data

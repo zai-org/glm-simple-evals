@@ -1,31 +1,23 @@
 """
-Measuring Mathematical Problem Solving and Reasoning Ability With the MathBench and ReasoningBench Dataset from Xiaotao Gu's Team.
+LiveCodeBench: Holistic and Contamination Free Evaluation of Large Language Models for Code
+Naman Jain, King Han, Alex Gu, Wen-Ding Li, Fanjia Yan, Tianjun Zhang, Sida Wang, Armando Solar-Lezama, Koushik Sen, Ion Stoica
+https://arxiv.org/abs/2403.07974
 """
-
-import random
-import re
-import os
-
-import pandas
+import base64
 import json
 import multiprocessing
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
-
-from evals import common
-from utils.types import Eval, EvalResult, SamplerBase, SingleEvalResult
-import re
-import torch
 import numpy as np
-import sys
-from typing import *
-from tqdm.auto import tqdm
-from collections import defaultdict, Counter
-import functools
-from concurrent.futures import as_completed, ProcessPoolExecutor
-from utils.testing_utils import run_test
+import os
 import pickle
-import base64
+import random
+import re
 import zlib
+
+from typing import Optional
+from evals import common
+
+from utils.types import Eval, EvalResult, SamplerBase, SingleEvalResult
+from utils.testing_utils import run_test
 
 SYSTEM_MESSAGE_GENERIC = f"You are an expert Python programmer. You will be given a question (problem specification) and will generate a correct Python program that matches the specification and passes all tests. You will NOT return anything except for the program."
 
@@ -47,7 +39,6 @@ def get_generic_question_template_answer(row):
     return prompt
 
 def get_question_template_answer(row, model_name):
-    # 如果 o1 在 model_name 里面，由于 o1 没有 system prompt，所以直接在前面加
     if "o1" in model_name.lower():
         chat_messages = [
             {
@@ -59,15 +50,8 @@ def get_question_template_answer(row, model_name):
         ]
         return chat_messages
     elif "cot" in model_name.lower():
-
-        # ---------------------------
-        # _SYSTEM_MESSAGE_GENERIC = f"You are an expert Python programmer. You will be given a question (problem specification) and will generate a correct Python program that matches the specification and passes all tests."
-
         prompt = ""
-        # prompt = "You will be given a question (problem specification) and will generate a correct Python program that matches the specification and passes all tests.\n\n"
-        # prompt = "Generate a correct Python program that matches the specification and passes all tests.\n\n"
         prompt += f"{row['prompt']}\n\n"
-        # prompt = f"{row['prompt']}\n\n"
 
         if len(row["starter_code"]):
             prompt += f"### Format: {FORMATTING_MESSAGE_WITH_STARTER_CODE}\n"
@@ -77,11 +61,9 @@ def get_question_template_answer(row, model_name):
             prompt += f"```python\n# YOUR CODE HERE\n```\n\n"
 
         messages = [
-            # {"role": "system", "content": _SYSTEM_MESSAGE_GENERIC},
             {"role": "user", "content": prompt},
         ]
     else:
-                # ------ standard implementation ------
         prompt = "You will be given a question (problem specification) and will generate a correct Python program that matches the specification and passes all tests. You will NOT return anything except for the program.\n\n"
 
         prompt += f"Question:\n{row['prompt']}\n\n"
@@ -137,16 +119,10 @@ def compute_metrics_from_results(results, k_list=[1, 5]):
     correct = np.array(correct)
     ks = k_list
     score = correct / total * 100
-    # detail_pass_at_k = {
-    #     f"pass@{k}": estimate_pass_at_k(total, correct, k).tolist()
-    #     for k in ks
-    #     if (total >= k).all()
-    # }
     return SingleEvalResult(
         score=score,
         metrics={
             f"pass@{k}": estimate_pass_at_k(total, correct, k) * 100
-            # this will be aggrated so no need of .mean()
             for k in ks
             if (total >= k).all()
         },
@@ -167,9 +143,6 @@ def check_correctness(sample, generation, timeout, debug=True):
         target=_temp_run, args=(sample, generation, debug, result)
     )
     p.start()
-    #p.join(
-    #    timeout=(timeout + 1) * len(json.loads(sample["input_output"])["inputs"]) + 5
-    #)
     p.join(
         timeout=(timeout)
     )
@@ -254,11 +227,6 @@ def postprocess_generation(code, sample, dataset_type="humanevalx", mode="instru
 
 class LiveCodeBenchEval(Eval):
     def __init__(self, num_examples: Optional[int] = None, data_dir: str = "data", proc_num: int = 50, num_repeat: int = 1, model_name: str = "cot", date="latest"):
-        # df = pandas.read_csv(
-        #     os.path.join(data_dir, "math/math_test.csv")
-        # )
-        # examples = [row.to_dict() for _, row in df.iterrows()]
-
         examples = self.prepare_dataset(data_dir, date)
         if num_examples and num_examples >= 0:
             examples = random.Random(0).sample(examples, num_examples)
@@ -273,8 +241,6 @@ class LiveCodeBenchEval(Eval):
 
     def prepare_dataset(self, data_dir, date):
         print(__file__, data_dir)
-        # data_dir = "/workspace/qianyi/glm-evals-datasets/data"
-
         if date == "latest":
             examples = [json.loads(line) for line in open(os.path.join(data_dir, "livecodebench/livecodebench.jsonl"))]
         else:
@@ -287,7 +253,6 @@ class LiveCodeBenchEval(Eval):
         examples = [
             {
                 "prompt": x["question_content"], 
-                # "reference": x["reference"][0], 
                 "question_id": x["question_id"],
                 "public_test_cases": x["public_test_cases"],
                 "metadata": x["metadata"],
@@ -300,21 +265,12 @@ class LiveCodeBenchEval(Eval):
         
         def fn(row: dict):
             prompt = row["prompt"]
-            # if len(row["starter_code"]):
-            #     prompt = "Question:\n" + prompt + f"\nFormat: You will use the following starter code to write the solution to the problem and enclose your code within delimiters.\n```python\n{row['starter_code']}\n```\n\nAnswer: (use the provided format with backticks)\n\n"
-            # else:
-            #     prompt = "Question:\n" + prompt + f"\nFormat: You will use the following starter code to write the solution to the problem and enclose your code within delimiters.\n```python\n# YOUR CODE HERE\n```\n\nAnswer: (use the provided format with backticks)\n\n"
-            # prompt_messages = [dict(content=prompt, role="user")]
             prompt_messages = get_question_template_answer(row, self.model_name)
-
-            # response_text = sampler(prompt_messages, top_p=0.95, temperature=1.00)
             response_text = sampler(prompt_messages)
 
-            #print(response_text)
             sample = row
             prediction = response_text
             
-            task_id = sample["question_id"]
             sample["prompt"] = ""
             
             sample["generation"] = postprocess_generation(prediction, sample, dataset_type=self.dataset_type, mode="instruction")

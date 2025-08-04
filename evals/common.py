@@ -5,7 +5,7 @@ from multiprocessing import Process, Queue
 from typing import Any
 from tqdm import tqdm
 
-from utils.types import EvalResult, Message, SingleEvalResult, SamplerBase
+from utils.types import EvalResult, SingleEvalResult, SamplerBase
 
 MATH_QUERY_TEMPLATE = """
 Solve the following math problem step by step. The last line of your response should be of the form ANSWER: $ANSWER (without quotes) where $ANSWER is the answer to the problem.
@@ -97,22 +97,8 @@ Respond with only "Yes" or "No" (without quotes). Do not include a rationale.
     Expression 2: %(expression2)s
 """.strip()
 
-EQUALITY_TEMPLATE_QWQ = r"""
-For the development of reasoning models, these data annotation guidelines are specifically designed to evaluate the correctness of model-generated answers.
-In this task, you need to determine whether the standard answer (Label) and the model's answer (Answer) are mathematically equivalent in their final values.
-If there are differences in precision digits, the model's answer is considered correct if it falls within the range determined by the last significant digit of the standard answer.
-If the label contains multiple choices or solutions, the answer must match all of them to be considered correct. Partial matches (where the answer only matches some but not all choices) should be recognized as a wrong answer.
-If one of them has units and the other does not, they can be considered the same, and an answer with more than one solution can disregard the exchange of numerical positions, except in special cases such as the grouping of coordinates.
-If equivalent, output 'Yes'; otherwise, output 'No'. No explanation is needed.
-Label: %(expression1)s
-Answer: %(expression2)s
-""".strip()
-
 def check_equality(sampler: SamplerBase, expr1: str, expr2: str, question: str, qwq_check: bool):
-    if qwq_check:
-        prompt = EQUALITY_TEMPLATE_QWQ % {"expression1": expr1, "expression2": expr2}
-    else:
-        prompt = EQUALITY_TEMPLATE % {"expression1": expr1, "expression2": expr2, "question": question}
+    prompt = EQUALITY_TEMPLATE % {"expression1": expr1, "expression2": expr2, "question": question}
 
     for _ in range(3):
         response = sampler([dict(content=prompt, role="user")])
@@ -202,20 +188,7 @@ def aggregate_results(
     )
 
 
-# def map_with_progress(f: callable, xs: list[Any], num_threads: int = 50):
-#     """
-#     Apply f to each element of xs, using a ThreadPool, and show progress.
-#     """
-#     if os.getenv("debug"):
-#         return list(map(f, tqdm(xs, total=len(xs))))
-#     else:
-#         with ThreadPool(min(num_threads, len(xs))) as pool:
-#             return list(tqdm(pool.imap(f, xs), total=len(xs)))
-
-
-def process_worker(task_queue, done_queue, worker_func):
-    max_retry = 3
-    
+def process_worker(task_queue, done_queue, worker_func):    
     for line in iter(task_queue.get, "STOP"):
         result = worker_func(line)
 
@@ -353,8 +326,6 @@ Example:
 
 
 def extract_answer(sampler, question, response):
-    # response = response.strip().split("\n")
-    # answer = re.findall(r'\\box{(.+?)}', response[-1])
     if response == "":
         return ""
     
@@ -366,10 +337,8 @@ def extract_answer(sampler, question, response):
         resp_text = [x for x in response if x.strip()]
         resp_text = "\n".join(resp_text[-5:])
 
-    # resp_text = resp_text[-1]
     answer = None
     if "\\box" in resp_text or "\\boxed" in resp_text:
-        # extract value in \box
         answer = re.findall(r'\\boxed\{([^{}]*(?:\{[^{}]*\})*[^{}]*)\}', resp_text)
         if len(answer) == 0:
             answer = re.findall(r'\\box\{([^{}]*(?:\{[^{}]*\})*[^{}]*)\}', resp_text)
@@ -378,52 +347,26 @@ def extract_answer(sampler, question, response):
     if answer: 
         answer = answer[0].strip()
     else:
-        # if answer is None and "<answer>" in original_response:
-        #     answer = re.findall(r"<answer>([\s\S]+?)</answer>", original_response)
-
         answer_template = EXTRACTION_TEMPLATE.format(question=question, answer=resp_text)
         for _ in range(6):
             extracted_answer = sampler([dict(content=answer_template, role="user")])
-            # answer = extracted_answer[10:]
-            # answer = answer.replace("<ANSWER>: ", "").strip()
             if extracted_answer is None:
                 answer = ""
                 continue
             else:
-                # answer = extracted_answer[10:]
                 answer = extracted_answer.replace("<ANSWER>: ", "").strip()
                 break
-            
-    # if answer:
-    #     answer = answer[0]
-    # else:
-    #     if "<answer>" in response[-1]:
-    #         response[-1] = response[-1].replace("<answer>", "").replace("</answer>", "")
-    #     for _ in range(3):
-    #         prompt = EXTRACTION_TEMPLATE.format(question=question, answer=response[-1])
-    #         extracted_answer = sampler([dict(content=prompt, role="user")])
-    #         answer = extracted_answer[10:].strip()
-    #         if len(answer) == 0:
-    #             continue
-    #         else:
-    #             break
     return answer
 
 
 
 def extract_answer_multi_choice(sampler, question, response):
-    # response = response.strip().split("\n")
-    # answer = re.findall(r'\\box{(.+?)}', response[-1])
-    original_response = response
-
     response = response.strip().split("\n")
     resp_text = [x for x in response if x.strip()]
     resp_text = "\n".join(resp_text[-5:])
 
-    # resp_text = resp_text[-1]
     answer = None
     if "\\box" in resp_text or "\\boxed" in resp_text:
-        # extract value in \box
         answer = re.findall(r'\\box\{([^{}]*(?:\{[^{}]*\})*[^{}]*)\}', resp_text)
         if len(answer) == 0:
             answer = re.findall(r'\\boxed\{([^{}]*(?:\{[^{}]*\})*[^{}]*)\}', resp_text)
@@ -434,13 +377,10 @@ def extract_answer_multi_choice(sampler, question, response):
     answer_template = CHOICE_EXTRACTION_TEMPLATE.format(question=question, answer=resp_text)
     for _ in range(6):
         extracted_answer = sampler([dict(content=answer_template, role="user")])
-        # answer = extracted_answer[10:]
-        # answer = answer.replace("<ANSWER>: ", "").strip()
         if extracted_answer is None:
             answer = ""
             continue
         else:
-            # answer = extracted_answer[10:]
             answer = extracted_answer.replace("<CHOICE>: ", "").strip()
             break
             
@@ -462,7 +402,6 @@ def compute_repeat_metrics(success, num_repeats, worst_of_n, eval_result):
     group_size = len(success) // num_repeats
     accuracy_list = []
     
-    # 计算每次重复的准确率
     for i in range(num_repeats):
         start_idx = i * group_size
         end_idx = (i + 1) * group_size
@@ -472,13 +411,11 @@ def compute_repeat_metrics(success, num_repeats, worst_of_n, eval_result):
         
     print(f"Accuracy for each repeat: {accuracy_list}")
     
-    # 计算准确率统计指标
     eval_result.metrics['accuracy_list'] = accuracy_list
     eval_result.metrics['accuracy'] = sum(accuracy_list) / len(accuracy_list)
     eval_result.metrics['accuracy_var'] = sum((x - eval_result.metrics['accuracy']) ** 2 for x in accuracy_list) / len(accuracy_list)
     eval_result.metrics['accuracy_std'] = eval_result.metrics['accuracy_var'] ** 0.5
 
-    # 计算worst-of-n指标
     if worst_of_n:
         worst_of_n_scores = []
         for i in range(group_size):

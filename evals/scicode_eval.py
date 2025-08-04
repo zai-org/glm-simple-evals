@@ -1,43 +1,25 @@
 """
-Measuring Mathematical Problem Solving and Reasoning Ability With the MathBench and ReasoningBench Dataset from Xiaotao Gu's Team.
+SciCode: A Research Coding Benchmark Curated by Scientists
+Minyang Tian, Luyu Gao, Shizhuo Dylan Zhang, Xinan Chen, Cunwei Fan, Xuefei Guo, Roland Haas, Pan Ji, Kittithat Krongchon, Yao Li, Shengyan Liu, Di Luo, Yutao Ma, Hao Tong, Kha Trinh, Chenyu Tian, Zihan Wang, Bohao Wu, Yanyu Xiong, Shengzhu Yin, Minhui Zhu, Kilian Lieret, Yanxin Lu, Genglin Liu, Yufeng Du, Tianhua Tao, Ofir Press, Jamie Callan, Eliu Huerta, Hao Peng
+https://arxiv.org/abs/2407.13168
 """
-
+import ast
+import json
+import os
+import numpy as np
 import random
 import re
-import os
-from pathlib import Path
+import subprocess
+import time
 
-import pandas
-import json
-import multiprocessing
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from pathlib import Path
+from typing import Optional
 
 from evals import common
-from utils.types import Eval, EvalResult, SamplerBase, SingleEvalResult
-import re
-import torch
-import numpy as np
-import sys
-from typing import *
-from tqdm.auto import tqdm
-from collections import defaultdict, Counter
-import functools
-from concurrent.futures import as_completed, ProcessPoolExecutor
-from utils.testing_utils import run_test
-import pickle
-import base64
-import zlib
-import ast
-import time
-import inspect
-import subprocess
-from scicode.parse.parse import read_from_hf_dataset
-import shutil
-
+from utils.types import Eval, EvalResult, SamplerBase
 
 DEFAULT_PROMPT_TEMPLATE = Path("data/scicode/background_comment_template.txt").read_text()
 BACKGOUND_PROMPT_TEMPLATE = Path("data/scicode/multistep_template.txt").read_text()
-
 
 PROB_NUM = 80
 DEV_PROB_NUM = 15
@@ -46,7 +28,6 @@ DEV_STEP_NUM = 50
 h5py_file = "./data/scicode/test_data.h5"
 
 def extract_python_script(response: str):
-    # We will extract the python script from the response
     if '```' in response:
         python_script = response.split("```python")[1].split("```")[0] if '```python' in response else response.split('```')[1].split('```')[0]
     else:
@@ -167,7 +148,6 @@ class Gencode:
             self.save_prompt_with_steps(prob_data, prompt, num_steps)
         
         prompt_messages = [{"role": "user", "content": prompt}]
-        #print(f"prompt: {prompt_messages}")
         response_from_llm = sampler(prompt_messages)
         
         self.previous_llm_code[num_steps - 1] = extract_python_script(response_from_llm)
@@ -201,7 +181,7 @@ class Gencode:
                          problem_data["sub_steps"][num_steps - 1]["step_background"] if self.with_background
                          else problem_data["sub_steps"][num_steps - 1]["step_description_prompt"])
         next_step.append(self.process_problem_code(problem_data, num_steps))
-        output_str = "\n\n".join(output_lines[:-1])  # Remove the last "------"
+        output_str = "\n\n".join(output_lines[:-1])
         next_step_str = "\n\n".join(next_step)
         previous_code_str = "\n".join(previous_code)
         return output_str, next_step_str, previous_code_str
@@ -222,7 +202,6 @@ class Gencode:
 
 def test_code(scicode_data):
     log_dir = Path(scicode_tmp_dir, "log")
-    #scicode_data = read_from_hf_dataset(split)
     scicode_data = [data for data in scicode_data]
     json_dct = {}
     json_idx = {}
@@ -303,18 +282,12 @@ from scicode.parse.parse import process_hdf5_to_tuple
                 with open(logs_file, 'r') as f:
                     content = f.read().splitlines()
                     if content[0] == 'pass':
-                        # correct_prob[int(prob_id) - 1] += 1
-                        # correct_step.append(func_id)
-                        # correct_dict[prob_id].append(func_id)
                         c_prob += 1
                         c_step = func_id
                         c_dict = func_id
                 return (prob_id, t_prob, c_prob, c_step, c_dict)
             ret = run_script(file_path)
             if ret == 0:
-                # correct_prob[int(prob_id) - 1] += 1
-                # correct_step.append(func_id)
-                # correct_dict[str(prob_id)].append(func_id)
                 c_prob += 1
                 c_step = func_id
                 c_dict = func_id
@@ -344,16 +317,12 @@ from scicode.parse.parse import process_hdf5_to_tuple
             sub_tot_prob += t_prob
             sub_correct_prob += c_prob
 
-    test_time = time.time() - start_time
-
     correct_prob_num = sum(1 for i in range(PROB_NUM) if
                            correct_prob[i] == tot_prob[i]
                            and tot_prob[i] != 0)
     
     return sub_correct_prob / sub_tot_prob, correct_prob_num / (PROB_NUM - DEV_PROB_NUM)
     
-    print(f"correct_prob_num: {correct_prob_num}, {PROB_NUM - DEV_PROB_NUM}")
-
 
 class SciCodeEval(Eval):
     def __init__(self, num_examples: Optional[int] = None, data_dir: str = "data", proc_num: int = 50, num_repeat: int = 1, model_name: str = "cot", save_dir: str = "", with_background:bool=True):
@@ -385,7 +354,6 @@ class SciCodeEval(Eval):
             prob_id = row['problem_id']
             steps = len(row['sub_steps'])
             
-            #prompt_template = DEFAULT_PROMPT_TEMPLATE
             prompt_template = BACKGOUND_PROMPT_TEMPLATE if self.with_background else DEFAULT_PROMPT_TEMPLATE
             gcode = Gencode(self.with_background)
             

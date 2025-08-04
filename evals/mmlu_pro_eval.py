@@ -1,14 +1,13 @@
 """
-Measuring Massive Multitask Language Understanding
-Dan Hendrycks, Collin Burns, Steven Basart, Andy Zou, Mantas Mazeika, Dawn Song, Jacob Steinhardt
-https://arxiv.org/abs/2009.03300
+MMLU-Pro: A More Robust and Challenging Multi-Task Language Understanding Benchmark
+Yubo Wang, Xueguang Ma, Ge Zhang, Yuansheng Ni, Abhranil Chandra, Shiguang Guo, Weiming Ren, Aaran Arulraj, Xuan He, Ziyan Jiang, Tianle Li, Max Ku, Kai Wang, Alex Zhuang, Rongqi Fan, Xiang Yue, Wenhu Chen
+https://arxiv.org/abs/2406.01574
 """
 
+import os
 import random
 import re
-import os
-import pandas
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Optional
 from functools import partial
 from datasets import load_dataset
 
@@ -25,7 +24,6 @@ def load_mmlu_pro(data_dir):
 def preprocess(test_df, group=False):
     res_df = []
     for each in test_df:
-        # print(each)
         options = []
         for opt in each["options"]:
             if opt == "N/A":
@@ -51,10 +49,6 @@ def format_example(question, options, cot_content=""):
     choice_map = "ABCDEFGHIJ"
     for i, opt in enumerate(options):
         example += "{}. {}\n".format(choice_map[i], opt)
-    # if cot_content == "":
-    #     example += "Answer: "
-    # else:
-    #     example += "Answer: " + cot_content + "\n\n"
     return example
 
 
@@ -93,8 +87,6 @@ def single_request(sampler, single_question, cot_examples_dict):
     prompt = "The following are multiple choice questions (with answers) about {}. Think step by" \
              " step and then output the answer in the format of \"The answer is (X)\" at the end.\n\n" \
         .format(category)
-    # for each in cot_examples:
-    #     prompt += format_example(each["question"], each["options"], each["cot_content"])
     input_text = format_example(question, options)
     try:
         prompt_messages = [dict(content=prompt + input_text, role="user")]

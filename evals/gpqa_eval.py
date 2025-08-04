@@ -9,10 +9,10 @@ import re
 import os
 
 import pandas
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Optional
 from functools import partial
 from evals import common
-from utils.types import Eval, EvalResult, MessageList, SamplerBase, SingleEvalResult
+from utils.types import Eval, EvalResult, SamplerBase, SingleEvalResult
 
 
 QUERY_TEMPLATE = """
@@ -112,41 +112,6 @@ class GPQAEval(Eval):
         self.extractor = extractor
 
     def __call__(self, sampler: SamplerBase) -> EvalResult:
-        def fn(row: dict):
-            choices = [
-                row["Correct Answer"],
-                row["Incorrect Answer 1"],
-                row["Incorrect Answer 2"],
-                row["Incorrect Answer 3"],
-            ]
-            choices = [choices[i] for i in row["permutation"]]
-            correct_index = choices.index(row["Correct Answer"])
-            correct_answer = "ABCD"[correct_index]
-            choices_dict = dict(
-                A=choices[0], B=choices[1], C=choices[2], D=choices[3], Question=row["Question"]
-            )
-            prompt_messages = [dict(content=format_question(choices_dict, self.auto_extract_answer), role="user")]
-            response_text = sampler(prompt_messages)
-            match = re.search(ANSWER_PATTERN, response_text)
-            if self.auto_extract_answer:
-                if match:
-                    extracted_answer = match.group(1)
-                    score = 1.0 if extracted_answer == correct_answer else 0.0
-                else:
-                    extracted_answer = common.extract_answer_multi_choice(sampler, format_question(choices_dict, self.auto_extract_answer), response_text)
-                    if len(extracted_answer.strip()) > 1:
-                        extracted_answer = extracted_answer.strip()[0]
-                    if extracted_answer not in "ABCD":
-                        extracted_answer = random.choice("ABCD")
-                    score = 1.0 if extracted_answer == correct_answer else 0.0
-            else:
-                extracted_answer = match.group(1) if match else None
-                score = 1.0 if extracted_answer == correct_answer else 0.0
-            score = score * 100
-            return SingleEvalResult(
-                score=score, metrics={"chars": len(response_text)}
-            )
-
         results = common.map_with_progress(partial(process_func, sampler, self.equality_checker, self.auto_extract_answer, self.extractor), self.examples, num_threads=self.proc_num)
         results_origin = [x[0] for x in results]
         response_data = [x[1] for x in results]

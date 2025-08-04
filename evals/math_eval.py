@@ -1,5 +1,5 @@
 """
-Measuring Mathematical Problem Solving With the MATH Dataset
+Mathematical problem-solving across various difficulty levels
 Dan Hendrycks, Collin Burns, Saurav Kadavath, Akul Arora, Steven Basart, Eric Tang, Dawn Song, Jacob Steinhardt
 https://arxiv.org/abs/2103.03874
 """

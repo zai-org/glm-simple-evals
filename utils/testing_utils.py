@@ -34,8 +34,6 @@ class TimeoutException(Exception):
 
 
 def timeout_handler(signum, frame):
-    if debug:
-        print("alarm went off")
     # return
     raise TimeoutException
 

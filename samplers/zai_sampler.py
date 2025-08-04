@@ -1,6 +1,3 @@
-import os
-import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import time
 import traceback
 from typing import Optional
@@ -102,12 +99,3 @@ class ZaiSampler(SamplerBase):
             return self.get_resp(message_list, top_p, temperature)
         else:
             return self.get_resp_stream(message_list, top_p, temperature)
-        
-
-if __name__ == "__main__":
-    client = ZaiSampler(model="glm-4.5", api_key="91205c7411844531b35492cee49fbcb4.14LwyMRD2O9OusUy", stream=True)
-    messages = [
-        {"role": "user", "content": "Hi?"},
-    ]
-    response = client(messages)
-    print(response)

@@ -1,12 +1,13 @@
+"""
+Humanity's Last Exam
+https://arxiv.org/abs/2501.14249
+"""
 import random
 import re
 import os
 import json
-import pandas
-import jsonlines
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Optional
 from functools import partial
-from datasets import load_dataset
 
 import math
 import numpy as np
@@ -181,7 +182,6 @@ class HLEEval(Eval):
         n = len(self.examples)
         accuracy = round(100 * sum(correct) / n, 2)
         # Wald estimator, 95% confidence interval
-        confidence_half_width = round(1.96 * math.sqrt(accuracy * (100 - accuracy) / n), 2)
         if n < 100:
             calibration_error = None
         else:

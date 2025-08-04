@@ -1,15 +1,13 @@
 import json
-import time
 import os
 
-import pandas as pd
 from functools import partial
 import random
 import string
 
 from evals.aime_eval import AimeEval
 from evals.gpqa_eval import GPQAEval
-from evals.math_eval_pass_k import MathPassKEval
+from evals.math_eval import MathEval
 from evals.livecodebench_eval import LiveCodeBenchEval
 from evals.scicode_eval import SciCodeEval
 from evals.mmlu_pro_eval import MMLUProEval
@@ -18,18 +16,13 @@ from evals.hle_eval import HLEEval
 from samplers.openai_sampler import OpenAISampler
 from samplers.zai_sampler import ZaiSampler
 
-from utils.statistic import count_reflection_actions
-
 import argparse
-import shutil
 
 NO_PROXY = os.environ.get("no_proxy", "")
 NO_PROXY = NO_PROXY.split(",") if NO_PROXY else []
 
 def generate_random_string(length=8):
-    # Define the characters to use (letters and digits)
     characters = string.ascii_letters + string.digits
-    # Generate a random string
     random_string = ''.join(random.choice(characters) for _ in range(length))
     return random_string
 
@@ -37,7 +30,6 @@ def generate_random_string(length=8):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--save_dir', type=str, required=True)
-    # parser.add_argument('--save_dir', type=str, default="/mnt/shl/open_source/glm-simple-evals/eval_results")
     parser.add_argument('--zai_api_key', type=str, default="")
     parser.add_argument('--openai_api_key', type=str, default=None)
     parser.add_argument('--openai_base_url', type=str, default=None)
@@ -86,9 +78,10 @@ if __name__ == '__main__':
     eval_dict = {
         'lcb': partial(LiveCodeBenchEval, num_examples=1 if debug else -1, data_dir=args.data_dir, proc_num=args.proc_num, num_repeat=1 if debug else 2, date=args.lcb_date),
         'scicode': partial(SciCodeEval, num_examples=5 if debug else -1, data_dir=args.data_dir, proc_num=args.proc_num, num_repeat=3, save_dir=args.save_dir, with_background=not args.sci_without_background),
-        'gpqa': partial(GPQAEval, n_repeats=1 if debug else 5, num_examples=5 if debug else None, data_dir=args.data_dir, proc_num=args.proc_num),
-        'aime2024': partial(AimeEval, equality_checker=equality_checker, num_examples=1 if debug else -1, year=2024, data_dir=args.data_dir, proc_num=args.proc_num, n_repeats=1 if debug else 10, auto_extract_answer=args.auto_extract_answer, worst_of_n=args.worst_of_n, extractor=extractor),
-        'math500': partial(MathPassKEval, equality_checker=equality_checker, num_examples=5 if debug else -1, data_dir=args.data_dir, proc_num=args.proc_num, num_repeats=3, worst_of_n=args.worst_of_n, extractor=extractor),
+        'gpqa': partial(GPQAEval, equality_checker=equality_checker, n_repeats=1 if debug else 10, num_examples=5 if debug else None, data_dir=args.data_dir, proc_num=args.proc_num, auto_extract_answer=args.auto_extract_answer),
+        'aime2024': partial(AimeEval, equality_checker=equality_checker, num_examples=1 if debug else -1, year=2024, data_dir=args.data_dir, proc_num=args.proc_num, n_repeats=1 if debug else 32, auto_extract_answer=args.auto_extract_answer, worst_of_n=args.worst_of_n, extractor=extractor),
+        'aime2025': partial(AimeEval, equality_checker=equality_checker, num_examples=30 if debug else -1, year=2025, data_dir=args.data_dir, proc_num=args.proc_num, n_repeats=1 if debug else 32, auto_extract_answer=args.auto_extract_answer, worst_of_n=args.worst_of_n, extractor=extractor),
+        'math500': partial(MathEval, equality_checker=equality_checker, num_examples=5 if debug else -1, data_dir=args.data_dir, proc_num=args.proc_num, n_repeats=3, extractor=extractor),
         'mmlu_pro': partial(MMLUProEval, num_examples=5 if debug else None, data_dir=args.data_dir, proc_num=args.proc_num),
         'hle': partial(HLEEval, equality_checker=equality_checker, num_examples=5 if debug else None, data_dir=args.data_dir, proc_num=args.proc_num)
     }
@@ -124,4 +117,3 @@ if __name__ == '__main__':
             with open(os.path.join(args.save_dir, 'simple_evals', eval_name, f"data.jsonl"), "w") as f:
                 f.writelines([json.dumps(x, ensure_ascii=False) + "\n" for x in response_data])
     
-        

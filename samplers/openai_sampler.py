@@ -1,8 +1,9 @@
-from utils.types import MessageList, SamplerBase
-from openai import OpenAI
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
 import time
 import traceback
+from typing import Optional
+from openai import OpenAI
+from utils.types import MessageList, SamplerBase
+
 
 class OpenAISampler(SamplerBase):
     """
