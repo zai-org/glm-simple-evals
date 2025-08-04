@@ -26,7 +26,7 @@ python3 evaluate.py \
 --model_name $MODEL_NAME \
 --backbone $BACKBONE \
 --zai_api_key $ZAI_API_KEY \
---openai_api_key $ZAI_API_KEY \
+--openai_api_key $OPENAI_API_KEY \
 --openai_base_url $OPENAI_BASE_URL \
 --save_dir $SAVE_DIR \
 --tasks aime2024 \
