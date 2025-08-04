@@ -97,8 +97,15 @@ Respond with only "Yes" or "No" (without quotes). Do not include a rationale.
     Expression 2: %(expression2)s
 """.strip()
 
-def check_equality(sampler: SamplerBase, expr1: str, expr2: str, question: str, qwq_check: bool):
-    prompt = EQUALITY_TEMPLATE % {"expression1": expr1, "expression2": expr2, "question": question}
+
+def check_equality(
+    sampler: SamplerBase, expr1: str, expr2: str, question: str, qwq_check: bool
+):
+    prompt = EQUALITY_TEMPLATE % {
+        "expression1": expr1,
+        "expression2": expr2,
+        "question": question,
+    }
 
     for _ in range(3):
         response = sampler([dict(content=prompt, role="user")])
@@ -108,13 +115,13 @@ def check_equality(sampler: SamplerBase, expr1: str, expr2: str, question: str, 
             break
     if len(response) == 0:
         return None
-    if '[3, +\\infty)' in expr1 or '[3, +\\infty)' in expr2:
+    if "[3, +\\infty)" in expr1 or "[3, +\\infty)" in expr2:
         print(response)
     # print(response)
     if "<answer>" in response and "</answer>" in response:
         response = re.findall(r"<answer>([\s\S]+?)</answer>", response)[-1].strip()
     elif qwq_check:
-        pattern = r'</think>(.*)'  # qwq 答案截断
+        pattern = r"</think>(.*)"  # qwq 答案截断
         match = re.search(pattern, response, re.DOTALL)
         if match:
             response = match.group(1)  # 返回匹配到的'</think>'之后的内容
@@ -122,18 +129,21 @@ def check_equality(sampler: SamplerBase, expr1: str, expr2: str, question: str, 
             response = ""  # 如果没有找到'</think>'，返回空字符串
     return response.lower().strip() == "yes"
 
+
 def get_final_answer(sampler, equality_checker, question, auto_extract_answer=False):
     if auto_extract_answer:
         prompt_messages = [dict(content=question, role="user")]
         response = sampler(prompt_messages)
-        if '<think>' in response:
-            if '</think>' in response:
-                response = response.split('</think>')[1]
+        if "<think>" in response:
+            if "</think>" in response:
+                response = response.split("</think>")[1]
             else:
-                return  None, response
+                return None, response
         extracted_answer = extract_answer(equality_checker, question, response)
     else:
-        prompt_messages = [dict(content=MATH_QUERY_TEMPLATE.format(Question=question), role="user")]
+        prompt_messages = [
+            dict(content=MATH_QUERY_TEMPLATE.format(Question=question), role="user")
+        ]
         response = sampler(prompt_messages)
         match = re.search(ANSWER_PATTERN, response)
         extracted_answer = match.group(1) if match else None
@@ -156,7 +166,7 @@ def _compute_stat(values: list, stat: str):
 def aggregate_results(
     single_eval_results: list[SingleEvalResult],
     default_stats: tuple[str] = ("mean", "std"),
-    name2stats: dict[str, tuple[str]] = None
+    name2stats: dict[str, tuple[str]] = None,
 ) -> EvalResult:
     """
     Aggregate results from multiple evaluations into a single EvalResult.
@@ -174,7 +184,7 @@ def aggregate_results(
         for stat in stats:
             key = name if stat == "mean" else f"{name}:{stat}"
             final_metrics[key] = _compute_stat(values, stat)
-    
+
     response_data = []
     for single_eval_result in single_eval_results:
         single_eval_result = single_eval_result.__dict__
@@ -183,12 +193,10 @@ def aggregate_results(
             single_eval_result.pop("score")
             response_data.append(single_eval_result)
 
-    return EvalResult(
-        score=final_metrics.pop("score", None), metrics=final_metrics
-    )
+    return EvalResult(score=final_metrics.pop("score", None), metrics=final_metrics)
 
 
-def process_worker(task_queue, done_queue, worker_func):    
+def process_worker(task_queue, done_queue, worker_func):
     for line in iter(task_queue.get, "STOP"):
         result = worker_func(line)
 
@@ -200,20 +208,19 @@ def process_worker(task_queue, done_queue, worker_func):
 def map_with_progress(f: callable, xs: list[Any], num_threads: int = 50):
     num_processes = num_threads
     QUEUE_SIZE = 3000
-    
+
     task_queue, done_queue = Queue(maxsize=QUEUE_SIZE), Queue(maxsize=QUEUE_SIZE)
 
-    def read_data_into_queue():        
+    def read_data_into_queue():
         for line in xs:
             task_queue.put(line)
 
         for _ in range(num_processes):
-            task_queue.put('STOP')
+            task_queue.put("STOP")
 
     processes = []
     for _ in range(num_processes):
-        process = Process(target=process_worker,
-                    args=(task_queue, done_queue, f))
+        process = Process(target=process_worker, args=(task_queue, done_queue, f))
         process.start()
         processes.append(process)
 
@@ -222,11 +229,11 @@ def map_with_progress(f: callable, xs: list[Any], num_threads: int = 50):
 
     progress_bar = tqdm(total=len(xs))
     num_finished = 0
-    
+
     results = []
     while num_finished < num_processes:
         item = done_queue.get()
-        if item == 'COMPLETE':
+        if item == "COMPLETE":
             num_finished += 1
         else:
             results.append(item)
@@ -240,20 +247,22 @@ def map_with_progress(f: callable, xs: list[Any], num_threads: int = 50):
 def map_with_ordered_progress(f: callable, xs: list[Any], num_threads: int = 50):
     num_processes = num_threads
     QUEUE_SIZE = 3000
-    
+
     task_queue, done_queue = Queue(maxsize=QUEUE_SIZE), Queue(maxsize=QUEUE_SIZE)
 
-    def read_data_into_queue():        
+    def read_data_into_queue():
         for i, line in enumerate(xs):
             task_queue.put((i, line))
 
         for _ in range(num_processes):
-            task_queue.put('STOP')
+            task_queue.put("STOP")
 
     processes = []
     for _ in range(num_processes):
-        process = Process(target=process_worker,
-                    args=(task_queue, done_queue, lambda x: (x[0], f(x[1]))))
+        process = Process(
+            target=process_worker,
+            args=(task_queue, done_queue, lambda x: (x[0], f(x[1]))),
+        )
         process.start()
         processes.append(process)
 
@@ -262,11 +271,11 @@ def map_with_ordered_progress(f: callable, xs: list[Any], num_threads: int = 50)
 
     progress_bar = tqdm(total=len(xs))
     num_finished = 0
-    
+
     results_with_index = []
     while num_finished < num_processes:
         item = done_queue.get()
-        if item == 'COMPLETE':
+        if item == "COMPLETE":
             num_finished += 1
         else:
             results_with_index.append(item)
@@ -277,9 +286,8 @@ def map_with_ordered_progress(f: callable, xs: list[Any], num_threads: int = 50)
     # Sort results by index and return only the results without indices
     results_with_index.sort(key=lambda x: x[0])
     results = [r[1] for r in results_with_index]
-    
-    return results
 
+    return results
 
 
 EXTRACTION_TEMPLATE = """
@@ -328,7 +336,7 @@ Example:
 def extract_answer(sampler, question, response):
     if response == "":
         return ""
-    
+
     original_response = response
     if "<answer>" in response and "</answer>" in response:
         resp_text = re.findall(r"<answer>([\s\S]+?)</answer>", response)[-1].strip()
@@ -339,15 +347,16 @@ def extract_answer(sampler, question, response):
 
     answer = None
     if "\\box" in resp_text or "\\boxed" in resp_text:
-        answer = re.findall(r'\\boxed\{([^{}]*(?:\{[^{}]*\})*[^{}]*)\}', resp_text)
+        answer = re.findall(r"\\boxed\{([^{}]*(?:\{[^{}]*\})*[^{}]*)\}", resp_text)
         if len(answer) == 0:
-            answer = re.findall(r'\\box\{([^{}]*(?:\{[^{}]*\})*[^{}]*)\}', resp_text)
+            answer = re.findall(r"\\box\{([^{}]*(?:\{[^{}]*\})*[^{}]*)\}", resp_text)
 
-
-    if answer: 
+    if answer:
         answer = answer[0].strip()
     else:
-        answer_template = EXTRACTION_TEMPLATE.format(question=question, answer=resp_text)
+        answer_template = EXTRACTION_TEMPLATE.format(
+            question=question, answer=resp_text
+        )
         for _ in range(6):
             extracted_answer = sampler([dict(content=answer_template, role="user")])
             if extracted_answer is None:
@@ -359,7 +368,6 @@ def extract_answer(sampler, question, response):
     return answer
 
 
-
 def extract_answer_multi_choice(sampler, question, response):
     response = response.strip().split("\n")
     resp_text = [x for x in response if x.strip()]
@@ -367,14 +375,16 @@ def extract_answer_multi_choice(sampler, question, response):
 
     answer = None
     if "\\box" in resp_text or "\\boxed" in resp_text:
-        answer = re.findall(r'\\box\{([^{}]*(?:\{[^{}]*\})*[^{}]*)\}', resp_text)
+        answer = re.findall(r"\\box\{([^{}]*(?:\{[^{}]*\})*[^{}]*)\}", resp_text)
         if len(answer) == 0:
-            answer = re.findall(r'\\boxed\{([^{}]*(?:\{[^{}]*\})*[^{}]*)\}', resp_text)
+            answer = re.findall(r"\\boxed\{([^{}]*(?:\{[^{}]*\})*[^{}]*)\}", resp_text)
 
     if answer is not None and len(answer) > 0:
         resp_text = answer[-1].strip()
-    
-    answer_template = CHOICE_EXTRACTION_TEMPLATE.format(question=question, answer=resp_text)
+
+    answer_template = CHOICE_EXTRACTION_TEMPLATE.format(
+        question=question, answer=resp_text
+    )
     for _ in range(6):
         extracted_answer = sampler([dict(content=answer_template, role="user")])
         if extracted_answer is None:
@@ -383,38 +393,41 @@ def extract_answer_multi_choice(sampler, question, response):
         else:
             answer = extracted_answer.replace("<CHOICE>: ", "").strip()
             break
-            
+
     return answer
+
 
 def compute_repeat_metrics(success, num_repeats, worst_of_n, eval_result):
     """
     计算多次重复评测的指标
-    
+
     Args:
         success: 成功的评测结果列表
         num_repeats: 重复评测次数
         worst_of_n: 是否计算worst-of-n指标
         eval_result: 原始评测结果对象
-        
+
     Returns:
         更新后的eval_result对象
     """
     group_size = len(success) // num_repeats
     accuracy_list = []
-    
+
     for i in range(num_repeats):
         start_idx = i * group_size
         end_idx = (i + 1) * group_size
         group_results = success[start_idx:end_idx]
         group_accuracy = sum(r.score for r in group_results) / len(group_results)
         accuracy_list.append(group_accuracy)
-        
+
     print(f"Accuracy for each repeat: {accuracy_list}")
-    
-    eval_result.metrics['accuracy_list'] = accuracy_list
-    eval_result.metrics['accuracy'] = sum(accuracy_list) / len(accuracy_list)
-    eval_result.metrics['accuracy_var'] = sum((x - eval_result.metrics['accuracy']) ** 2 for x in accuracy_list) / len(accuracy_list)
-    eval_result.metrics['accuracy_std'] = eval_result.metrics['accuracy_var'] ** 0.5
+
+    eval_result.metrics["accuracy_list"] = accuracy_list
+    eval_result.metrics["accuracy"] = sum(accuracy_list) / len(accuracy_list)
+    eval_result.metrics["accuracy_var"] = sum(
+        (x - eval_result.metrics["accuracy"]) ** 2 for x in accuracy_list
+    ) / len(accuracy_list)
+    eval_result.metrics["accuracy_std"] = eval_result.metrics["accuracy_var"] ** 0.5
 
     if worst_of_n:
         worst_of_n_scores = []
@@ -425,7 +438,9 @@ def compute_repeat_metrics(success, num_repeats, worst_of_n, eval_result):
                 if success[idx].score < worst_score:
                     worst_score = success[idx].score
             worst_of_n_scores.append(worst_score)
-        eval_result.metrics['worst_of_n'] = worst_of_n_scores
-        eval_result.metrics['worst_of_n_avg'] = sum(worst_of_n_scores) / len(worst_of_n_scores)
-    
+        eval_result.metrics["worst_of_n"] = worst_of_n_scores
+        eval_result.metrics["worst_of_n_avg"] = sum(worst_of_n_scores) / len(
+            worst_of_n_scores
+        )
+
     return eval_result

@@ -14,7 +14,7 @@ class OpenAISampler(SamplerBase):
         self,
         url: str = "",
         model: str = "glm-4.5",
-        api_key: str = '',
+        api_key: str = "",
         system_message: Optional[str] = None,
         temperature: float = 0.0,
         max_tokens: int = 4096,
@@ -27,18 +27,18 @@ class OpenAISampler(SamplerBase):
         self.model = model
         self.client = OpenAI(api_key=api_key, base_url=url, timeout=360)
         self.stream = stream
-        
+
     def get_resp(self, message_list, top_p, temperature):
         temperature = temperature if temperature > 0 else self.temperature
         top_p = top_p if top_p > 0 else 0.95
-        
+
         for _ in range(3):
             try:
                 chat_completion = self.client.chat.completions.create(
                     messages=message_list,
                     model=self.model,
                     temperature=self.temperature,
-                    max_tokens=self.max_tokens
+                    max_tokens=self.max_tokens,
                 )
                 output = chat_completion.choices[0].message.content
                 return output
@@ -47,14 +47,13 @@ class OpenAISampler(SamplerBase):
                 time.sleep(1)
                 continue
         print(f"failed, last exception: {e if 'e' in locals() else ''}")
-        return ''
-
+        return ""
 
     def get_resp_stream(self, message_list, top_p=-1, temperature=-1):
         temperature = temperature if temperature > 0 else self.temperature
         top_p = top_p if top_p > 0 else 0.95
-        
-        final = ''
+
+        final = ""
         for _ in range(200):
             try:
                 chat_completion_res = self.client.chat.completions.create(
@@ -62,7 +61,7 @@ class OpenAISampler(SamplerBase):
                     messages=message_list,
                     stream=True,
                     max_tokens=self.max_tokens,
-                    temperature=temperature
+                    temperature=temperature,
                 )
                 for chunk in chat_completion_res:
                     if chunk.choices[0].delta.content:
@@ -73,27 +72,27 @@ class OpenAISampler(SamplerBase):
                 print(f"Exception: {e}\nTraceback: {traceback.format_exc()}")
                 time.sleep(5)
                 continue
-            
-        if final == '':
-            print(f"failed in get_resp for 50 times, last exception: {e if 'e' in locals() else ''}")
-            return ''
-        
-        content = ''
-        if '</think>' in final:
+
+        if final == "":
+            print(
+                f"failed in get_resp for 50 times, last exception: {e if 'e' in locals() else ''}"
+            )
+            return ""
+
+        content = ""
+        if "</think>" in final:
             content = final.split("</think>")[-1].strip()
             if not content:
                 content = final[-512:].strip()
         else:
             content = final[-512:].strip()
-        
+
         return content
-    
+
     def __call__(self, message_list: MessageList, top_p=0.95, temperature=0.6) -> str:
-        if self.system_message:      
+        if self.system_message:
             message_list = [
-                {
-                    "role": "system", "content": self.system_message
-                }
+                {"role": "system", "content": self.system_message}
             ] + message_list
         if not self.stream:
             return self.get_resp(message_list, top_p, temperature)

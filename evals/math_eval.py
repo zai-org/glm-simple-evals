@@ -1,5 +1,5 @@
 """
-Mathematical problem-solving across various difficulty levels
+Measuring Mathematical Problem Solving With the MATH Dataset
 Dan Hendrycks, Collin Burns, Saurav Kadavath, Akul Arora, Steven Basart, Eric Tang, Dawn Song, Jacob Steinhardt
 https://arxiv.org/abs/2103.03874
 """
@@ -142,7 +142,9 @@ def check_equality(sampler: SamplerBase, expr1: str, expr2: str):
 
 
 def process_func(sampler, equality_checker, row: dict):
-    prompt_messages = [dict(content=QUERY_TEMPLATE.format(Question=row["Question"]), role="user")]
+    prompt_messages = [
+        dict(content=QUERY_TEMPLATE.format(Question=row["Question"]), role="user")
+    ]
     response = sampler(prompt_messages)
     extracted_answer = extract_boxed_answer(response)
     if extracted_answer is None:
@@ -156,14 +158,27 @@ def process_func(sampler, equality_checker, row: dict):
 
     score = float(score)
     score = score * 100
-    return SingleEvalResult(score=score), dict(problem=row["Question"], response=response, extracted_answer=extracted_answer, label=row["Answer"], score=score)
-    
+    return SingleEvalResult(score=score), dict(
+        problem=row["Question"],
+        response=response,
+        extracted_answer=extracted_answer,
+        label=row["Answer"],
+        score=score,
+    )
+
 
 class MathEval(Eval):
-    def __init__(self, equality_checker: SamplerBase, n_repeats: int = 3, num_examples: Optional[int] = None, data_dir: str = "data", proc_num: int = 50, auto_extract_answer = False, extractor: SamplerBase = None):
-        df = pandas.read_json(
-            os.path.join(data_dir, "math/MATH500.jsonl"), lines=True
-        )
+    def __init__(
+        self,
+        equality_checker: SamplerBase,
+        n_repeats: int = 3,
+        num_examples: Optional[int] = None,
+        data_dir: str = "data",
+        proc_num: int = 50,
+        auto_extract_answer=False,
+        extractor: SamplerBase = None,
+    ):
+        df = pandas.read_json(os.path.join(data_dir, "math/MATH500.jsonl"), lines=True)
         examples = [row.to_dict() for _, row in df.iterrows()]
         examples = examples * n_repeats
         if num_examples:
@@ -174,11 +189,14 @@ class MathEval(Eval):
         self.auto_extract_answer = auto_extract_answer
         self.extractor = extractor
 
-
     def __call__(self, sampler: SamplerBase) -> EvalResult:
         proc_num = min(self.proc_num, 50)
-        results = common.map_with_progress(partial(process_func, sampler, self.equality_checker), self.examples, num_threads=proc_num)
-        
+        results = common.map_with_progress(
+            partial(process_func, sampler, self.equality_checker),
+            self.examples,
+            num_threads=proc_num,
+        )
+
         response_data = [x[1] for x in results]
         results = [x[0] for x in results]
         success = [x for x in results if x is not None]

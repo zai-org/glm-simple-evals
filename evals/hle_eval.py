@@ -2,6 +2,7 @@
 Humanity's Last Exam
 https://arxiv.org/abs/2501.14249
 """
+
 import random
 import re
 import os
@@ -9,7 +10,6 @@ import json
 from typing import Optional
 from functools import partial
 
-import math
 import numpy as np
 
 from evals import common
@@ -29,14 +29,18 @@ Answer: {your chosen answer}
 Confidence: {your confidence score between 0% and 100% for your answer}
 """.strip()
 
-def format_message(question):
-    system_prompt = SYSTEM_PROMPT_FOR_EXACT_MATCH if question["answer_type"] == "exactMatch" else SYSTEM_PROMPT_FOR_MULTIPLE_CHOICE
-    question_text = question['question']
 
-    messages = [
-        {"role": "user", "content": system_prompt + "\n\n" + question_text}
-    ]
+def format_message(question):
+    system_prompt = (
+        SYSTEM_PROMPT_FOR_EXACT_MATCH
+        if question["answer_type"] == "exactMatch"
+        else SYSTEM_PROMPT_FOR_MULTIPLE_CHOICE
+    )
+    question_text = question["question"]
+
+    messages = [{"role": "user", "content": system_prompt + "\n\n" + question_text}]
     return messages
+
 
 JUDGE_PROMPT = """Judge whether the following [response] to [question] is correct or not based on the precise and unambiguous [correct_answer] below.
 
@@ -63,12 +67,14 @@ CONFIDENCE_PATTERN = r"(?i)\*{0,2}confidence\*{0,2}\s*:\s*([\d\.]+)"
 
 EXTRACTED_PATTERN = r"(?i)\*{0,2}extracted_final_answer\*{0,2}\s*:\s*(.+)"
 
+
 def format_judge(question, correct_answer, response):
-    prompt = JUDGE_PROMPT.format(question=question, correct_answer=correct_answer, response=response)
-    messages = [
-        dict(content=prompt, role="user")
-    ]
+    prompt = JUDGE_PROMPT.format(
+        question=question, correct_answer=correct_answer, response=response
+    )
+    messages = [dict(content=prompt, role="user")]
     return messages
+
 
 def process_func(sampler, judge_sampler: SamplerBase, row: dict):
     messages = format_message(row)
@@ -90,7 +96,7 @@ def process_func(sampler, judge_sampler: SamplerBase, row: dict):
         match = re.search(EXTRACTED_PATTERN, judgement, flags=re.IGNORECASE)
         extracted_final_answer = match.group(1) if match else None
         if extracted_final_answer is None and row["answer_type"] == "multipleChoice":
-            choice = random.choice(["A","B","C","D","E"])
+            choice = random.choice(["A", "B", "C", "D", "E"])
             judgement = "Guesswork"
             correctness = "yes" if choice == row["answer"] else "no"
             confidence = 0.2
@@ -112,7 +118,7 @@ def process_func(sampler, judge_sampler: SamplerBase, row: dict):
         confidence = 1.0
         extracted_final_answer = extracted_final_answer or None
     accuracy = 1.0 if correctness == "yes" else 0
-    
+
     row["response_text"] = response_text
     row["extracted_final_answer"] = extracted_final_answer
     row["judgement"] = judgement
@@ -120,8 +126,9 @@ def process_func(sampler, judge_sampler: SamplerBase, row: dict):
     row["confidence"] = confidence
     return SingleEvalResult(score=accuracy, metrics={"confidence": confidence}), row
 
+
 # source: https://github.com/centerforaisafety/hle/blob/main/hle_eval/run_judge_results.py#L97
-def calib_err(confidence, correct, p='2', beta=100): 
+def calib_err(confidence, correct, p="2", beta=100):
     # beta is target bin size
     idxs = np.argsort(confidence)
     confidence = confidence[idxs]
@@ -132,40 +139,53 @@ def calib_err(confidence, correct, p='2', beta=100):
     cerr = 0
     total_examples = len(confidence)
     for i in range(len(bins) - 1):
-        bin_confidence = confidence[bins[i][0]:bins[i][1]]
-        bin_correct = correct[bins[i][0]:bins[i][1]]
+        bin_confidence = confidence[bins[i][0] : bins[i][1]]
+        bin_correct = correct[bins[i][0] : bins[i][1]]
         num_examples_in_bin = len(bin_confidence)
 
         if num_examples_in_bin > 0:
             difference = np.abs(np.nanmean(bin_confidence) - np.nanmean(bin_correct))
 
-            if p == '2':
+            if p == "2":
                 cerr += num_examples_in_bin / total_examples * np.square(difference)
-            elif p == '1':
+            elif p == "1":
                 cerr += num_examples_in_bin / total_examples * difference
-            elif p == 'infty' or p == 'infinity' or p == 'max':
+            elif p == "infty" or p == "infinity" or p == "max":
                 cerr = np.maximum(cerr, difference)
             else:
                 assert False, "p must be '1', '2', or 'infty'"
 
-    if p == '2':
+    if p == "2":
         cerr = np.sqrt(cerr)
 
     return cerr
 
+
 class HLEEval(Eval):
-    def __init__(self, equality_checker, num_examples: Optional[int] = None, data_dir: str = "data", proc_num: int = 50, version: int = 2500):
+    def __init__(
+        self,
+        equality_checker,
+        num_examples: Optional[int] = None,
+        data_dir: str = "data",
+        proc_num: int = 50,
+        version: int = 2500,
+    ):
         examples = []
         filename = "hle-3k.jsonl" if version == 3000 else "hle.jsonl"
-        dataset = [json.loads(line) for line in open(os.path.join(data_dir, "hle", filename), encoding='utf-8')]
+        dataset = [
+            json.loads(line)
+            for line in open(os.path.join(data_dir, "hle", filename), encoding="utf-8")
+        ]
         for row in dataset:
-            examples.append({
-                'id': row['id'],
-                'question': row['question'],
-                'answer': row['answer'],
-                'answer_type': row['answer_type'],
-                'category': row['category']
-            })
+            examples.append(
+                {
+                    "id": row["id"],
+                    "question": row["question"],
+                    "answer": row["answer"],
+                    "answer_type": row["answer_type"],
+                    "category": row["category"],
+                }
+            )
         if num_examples:
             examples = random.Random(0).sample(examples, num_examples)
         self.examples = examples
@@ -173,7 +193,11 @@ class HLEEval(Eval):
         self.judge_sampler = equality_checker
 
     def __call__(self, sampler: SamplerBase) -> EvalResult:
-        results = common.map_with_progress(partial(process_func, sampler, self.judge_sampler), self.examples, num_threads=self.proc_num)
+        results = common.map_with_progress(
+            partial(process_func, sampler, self.judge_sampler),
+            self.examples,
+            num_threads=self.proc_num,
+        )
         results, response_data = [x[0] for x in results], [x[1] for x in results]
 
         # source: https://github.com/centerforaisafety/hle/blob/main/hle_eval/run_judge_results.py#L148
@@ -185,8 +209,9 @@ class HLEEval(Eval):
         if n < 100:
             calibration_error = None
         else:
-            calibration_error = 100 * round(calib_err(confidence, correct, p='2', beta=100), 2)
+            calibration_error = 100 * round(
+                calib_err(confidence, correct, p="2", beta=100), 2
+            )
         final_results = common.aggregate_results(results)
         final_results.metrics["calibration_error"] = calibration_error
         return final_results, response_data
-

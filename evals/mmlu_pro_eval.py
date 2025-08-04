@@ -14,12 +14,14 @@ from datasets import load_dataset
 from evals import common
 from utils.types import Eval, EvalResult, SamplerBase, SingleEvalResult
 
+
 def load_mmlu_pro(data_dir):
-    dataset = load_dataset(os.path.join(data_dir, 'mmlu_pro'))
+    dataset = load_dataset(os.path.join(data_dir, "mmlu_pro"))
     test_df, val_df = dataset["test"], dataset["validation"]
     test_df = preprocess(test_df)
     val_df = preprocess(val_df, group=True)
     return test_df, val_df
+
 
 def preprocess(test_df, group=False):
     res_df = []
@@ -39,6 +41,7 @@ def preprocess(test_df, group=False):
             res[each["category"]] = []
         res[each["category"]].append(each)
     return res
+
 
 def format_example(question, options, cot_content=""):
     if cot_content == "":
@@ -63,7 +66,7 @@ def extract_answer(text):
 
 
 def extract_again(text):
-    match = re.search(r'.*[aA]nswer:\s*([A-J])', text)
+    match = re.search(r".*[aA]nswer:\s*([A-J])", text)
     if match:
         return match.group(1)
     else:
@@ -84,28 +87,34 @@ def single_request(sampler, single_question, cot_examples_dict):
     cot_examples = cot_examples_dict[category]
     question = single_question["question"]
     options = single_question["options"]
-    prompt = "The following are multiple choice questions (with answers) about {}. Think step by" \
-             " step and then output the answer in the format of \"The answer is (X)\" at the end.\n\n" \
-        .format(category)
+    prompt = (
+        "The following are multiple choice questions (with answers) about {}. Think step by"
+        ' step and then output the answer in the format of "The answer is (X)" at the end.\n\n'.format(
+            category
+        )
+    )
     input_text = format_example(question, options)
     try:
         prompt_messages = [dict(content=prompt + input_text, role="user")]
         response = sampler(prompt_messages)
-        response = response.replace('**', '')
+        response = response.replace("**", "")
     except Exception as e:
         print("error", e)
         return None, None
     pred = extract_answer(response)
-    return prompt+input_text, pred, response
+    return prompt + input_text, pred, response
+
 
 def process_func(sampler, cot_examples_dict: dict, row: dict):
-    prompt, extracted_answer, response_text = single_request(sampler, row, cot_examples_dict)
+    prompt, extracted_answer, response_text = single_request(
+        sampler, row, cot_examples_dict
+    )
     score = 1.0 if extracted_answer == row["answer"] else 0.0
     category = row["category"]
     score = score * 100
     return SingleEvalResult(score=score, metrics={category: score}), dict(
         prompt=prompt,
-        question=row['question'],
+        question=row["question"],
         category=category,
         response=response_text,
         extracted_answer=extracted_answer,
@@ -115,7 +124,12 @@ def process_func(sampler, cot_examples_dict: dict, row: dict):
 
 
 class MMLUProEval(Eval):
-    def __init__(self, num_examples: Optional[int] = None, data_dir: str = "data", proc_num: int = 50):
+    def __init__(
+        self,
+        num_examples: Optional[int] = None,
+        data_dir: str = "data",
+        proc_num: int = 50,
+    ):
         examples, self.cot_examples_dict = load_mmlu_pro(data_dir)
         if num_examples:
             examples = random.Random(0).sample(examples, num_examples)
@@ -123,8 +137,11 @@ class MMLUProEval(Eval):
         self.proc_num = proc_num
 
     def __call__(self, sampler: SamplerBase) -> EvalResult:
-    
-        results = common.map_with_progress(partial(process_func, sampler, self.cot_examples_dict), self.examples, num_threads=self.proc_num)
+
+        results = common.map_with_progress(
+            partial(process_func, sampler, self.cot_examples_dict),
+            self.examples,
+            num_threads=self.proc_num,
+        )
         results, response_data = [x[0] for x in results], [x[1] for x in results]
         return common.aggregate_results(results), response_data
-

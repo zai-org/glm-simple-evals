@@ -3,6 +3,7 @@ LiveCodeBench: Holistic and Contamination Free Evaluation of Large Language Mode
 Naman Jain, King Han, Alex Gu, Wen-Ding Li, Fanjia Yan, Tianjun Zhang, Sida Wang, Armando Solar-Lezama, Koushik Sen, Ion Stoica
 https://arxiv.org/abs/2403.07974
 """
+
 import base64
 import json
 import multiprocessing
@@ -25,18 +26,18 @@ FORMATTING_MESSAGE_WITH_STARTER_CODE = "You will use the following starter code 
 
 FORMATTING_WITHOUT_STARTER_CODE = "Read the inputs from stdin solve the problem and write the answer to stdout (do not directly test on the sample inputs). Enclose your code within delimiters as follows."
 
+
 def get_generic_question_template_answer(row):
     prompt = f"### Question:\n{row['prompt']}\n\n"
     if len(row["starter_code"]):
-        prompt += (
-            f"### Format: {FORMATTING_MESSAGE_WITH_STARTER_CODE}\n"
-        )
+        prompt += f"### Format: {FORMATTING_MESSAGE_WITH_STARTER_CODE}\n"
         prompt += f"```python\n{row['starter_code']}\n```\n\n"
     else:
         prompt += f"### Format: {FORMATTING_WITHOUT_STARTER_CODE}\n"
         prompt += "```python\n# YOUR CODE HERE\n```\n\n"
     prompt += f"### Answer: (use the provided format with backticks)\n\n"
     return prompt
+
 
 def get_question_template_answer(row, model_name):
     if "o1" in model_name.lower():
@@ -78,8 +79,9 @@ def get_question_template_answer(row, model_name):
             {"role": "system", "content": SYSTEM_MESSAGE_GENERIC},
             {"role": "user", "content": prompt},
         ]
-        
+
     return messages
+
 
 def estimate_pass_at_k(num_samples, num_correct, k):
     """Estimates pass@k of each problem and returns them in an array."""
@@ -143,10 +145,8 @@ def check_correctness(sample, generation, timeout, debug=True):
         target=_temp_run, args=(sample, generation, debug, result)
     )
     p.start()
-    p.join(
-        timeout=(timeout)
-    )
- 
+    p.join(timeout=(timeout))
+
     if p.is_alive():
         p.kill()
     if not result:
@@ -199,6 +199,7 @@ def evaluate_generations_by_problem(args):
     res = compute_metrics_from_results([res], k_list=[1])
     return res
 
+
 def postprocess_generation(code, sample, dataset_type="humanevalx", mode="instruction"):
     if "###Response" in code:
         code = code.split("###Response")[1]
@@ -206,12 +207,12 @@ def postprocess_generation(code, sample, dataset_type="humanevalx", mode="instru
         code = code.split("</think>")[1]
 
     if "```" in code:
-        pattern = r'```(.*?)\n(.*?)```'
+        pattern = r"```(.*?)\n(.*?)```"
         matches = re.findall(pattern, code, re.DOTALL)
         if len(matches) == 0:
             print("failed to find python code")
             return None
-        
+
         for match in matches[::-1]:
             if "python" in match[0].lower():
                 code = match[1]
@@ -220,19 +221,27 @@ def postprocess_generation(code, sample, dataset_type="humanevalx", mode="instru
                 # old implementation
                 code = match[1]
                 break
-    code = code.replace('\t', '    ')
+    code = code.replace("\t", "    ")
     code = code.rstrip()
     return code
 
 
 class LiveCodeBenchEval(Eval):
-    def __init__(self, num_examples: Optional[int] = None, data_dir: str = "data", proc_num: int = 50, num_repeat: int = 1, model_name: str = "cot", date="latest"):
+    def __init__(
+        self,
+        num_examples: Optional[int] = None,
+        data_dir: str = "data",
+        proc_num: int = 50,
+        num_repeat: int = 1,
+        model_name: str = "cot",
+        date="latest",
+    ):
         examples = self.prepare_dataset(data_dir, date)
         if num_examples and num_examples >= 0:
             examples = random.Random(0).sample(examples, num_examples)
         if num_repeat > 1:
             examples = examples * num_repeat
-            
+
         self.examples = examples
         self.proc_num = proc_num
         self.dataset_type = "livecodebench"
@@ -242,27 +251,41 @@ class LiveCodeBenchEval(Eval):
     def prepare_dataset(self, data_dir, date):
         print(__file__, data_dir)
         if date == "latest":
-            examples = [json.loads(line) for line in open(os.path.join(data_dir, "livecodebench/livecodebench.jsonl"))]
+            examples = [
+                json.loads(line)
+                for line in open(
+                    os.path.join(data_dir, "livecodebench/livecodebench.jsonl")
+                )
+            ]
         else:
-            if not os.path.exists(os.path.join(data_dir, f"livecodebench/livecodebench_{date}.jsonl")):
+            if not os.path.exists(
+                os.path.join(data_dir, f"livecodebench/livecodebench_{date}.jsonl")
+            ):
                 print(f"livecodebench_{date}.jsonl does not exist")
                 print("Please input date in the format of `2408_2501`")
                 raise ValueError(f"livecodebench_{date}.jsonl does not exist")
-            
-            examples = [json.loads(line) for line in open(os.path.join(data_dir, f"livecodebench/livecodebench_{date}.jsonl"))]
+
+            examples = [
+                json.loads(line)
+                for line in open(
+                    os.path.join(data_dir, f"livecodebench/livecodebench_{date}.jsonl")
+                )
+            ]
         examples = [
             {
-                "prompt": x["question_content"], 
+                "prompt": x["question_content"],
                 "question_id": x["question_id"],
                 "public_test_cases": x["public_test_cases"],
                 "metadata": x["metadata"],
                 "private_test_cases": x["private_test_cases"],
-                "starter_code": x["starter_code"]
-            } for x in examples]
+                "starter_code": x["starter_code"],
+            }
+            for x in examples
+        ]
         return examples
 
     def __call__(self, sampler: SamplerBase) -> EvalResult:
-        
+
         def fn(row: dict):
             prompt = row["prompt"]
             prompt_messages = get_question_template_answer(row, self.model_name)
@@ -270,14 +293,16 @@ class LiveCodeBenchEval(Eval):
 
             sample = row
             prediction = response_text
-            
+
             sample["prompt"] = ""
-            
-            sample["generation"] = postprocess_generation(prediction, sample, dataset_type=self.dataset_type, mode="instruction")
+
+            sample["generation"] = postprocess_generation(
+                prediction, sample, dataset_type=self.dataset_type, mode="instruction"
+            )
 
             if sample["generation"] is None or len(sample["generation"]) == 0:
                 print(f"generation is None or len(sample['generation']) == 0")
-                sample["generation"] = 'return 0'
+                sample["generation"] = "return 0"
 
             test_cases, tmp_inputs, tmp_outputs, tmp_fn = {}, [], [], None
             try:
@@ -286,7 +311,9 @@ class LiveCodeBenchEval(Eval):
                 private_test_cases = json.loads(
                     pickle.loads(
                         zlib.decompress(
-                            base64.b64decode(sample["private_test_cases"].encode("utf-8"))
+                            base64.b64decode(
+                                sample["private_test_cases"].encode("utf-8")
+                            )
                         )
                     )
                 )
@@ -295,18 +322,26 @@ class LiveCodeBenchEval(Eval):
                 tmp_outputs.append(case["output"])
             tmp_fn = json.loads(sample["metadata"]).get("func_name", None)
 
-            test_cases = {"inputs":tmp_inputs,"outputs":tmp_outputs,"fn_name":tmp_fn}
-            test_cases = {"input_output":json.dumps(test_cases)}
+            test_cases = {
+                "inputs": tmp_inputs,
+                "outputs": tmp_outputs,
+                "fn_name": tmp_fn,
+            }
+            test_cases = {"input_output": json.dumps(test_cases)}
 
             timeout = 30
             args = ([sample["generation"]], test_cases, False, timeout)
             result = evaluate_generations_by_problem(args)
-            return result, dict(response=response_text, question=prompt, score=result.score.item())
+            return result, dict(
+                response=response_text, question=prompt, score=result.score.item()
+            )
 
         num_thread = self.proc_num
         results = common.map_with_progress(fn, self.examples, num_threads=num_thread)
-        response_data = [x[1] for x in results if x and isinstance(x, tuple) and len(x) > 1]
+        response_data = [
+            x[1] for x in results if x and isinstance(x, tuple) and len(x) > 1
+        ]
         results = [x[0] for x in results if x is not None]
-        print('LCB validation results num:', len(results))
+        print("LCB validation results num:", len(results))
 
         return common.aggregate_results(results), response_data
