@@ -25,7 +25,10 @@ class OpenAISampler(SamplerBase):
         self.max_tokens = max_tokens
         self.url = url
         self.model = model
-        self.client = OpenAI(api_key=api_key, base_url=url, timeout=360)
+        if not url:
+            self.client = OpenAI(api_key=api_key, timeout=360)
+        else:
+            self.client = OpenAI(api_key=api_key, base_url=url, timeout=360)
         self.stream = stream
 
     def get_resp(self, message_list, top_p, temperature):

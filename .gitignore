@@ -11,4 +11,5 @@ test
 logs
 local/
 eval_results/
-*.sh
+eval.sh
+test.sh
