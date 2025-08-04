@@ -1,6 +1,5 @@
 """
 American Invitational Mathematics Examination
-https://artofproblemsolving.com/wiki/index.php/AIME_Problems_and_Solutions?srsltid=AfmBOooAV-AugtyUZ1yHWRj-VvKprC11HcltEZW16xBL05KmiyIYnkKt
 """
 
 import json
@@ -76,11 +75,6 @@ class AimeEval(Eval):
         extractor: SamplerBase = None,
     ):
         if year == 2025:
-            examples = [
-                json.loads(x)
-                for x in open(os.path.join(data_dir, "aime/aime_2025_I.jsonl"))
-            ]
-        elif year == 2026:
             examples = [
                 json.loads(x)
                 for x in open(os.path.join(data_dir, "aime/aime_2025.jsonl"))
