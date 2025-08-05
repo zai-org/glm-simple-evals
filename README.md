@@ -2,13 +2,13 @@
 
 [中文版](./README_zh.md)
 
-GLM-SIMPLE-EVALS is an internal evaluation toolset for large language models developed by Zhipu AI, based on OpenAI's [simple-evals](https://github.com/openai/simple-evals) project. We have open-sourced it to allow the community to reproduce the performance of Zhipu AI's officially released GLM-4.5 model on various evaluation metrics.
+GLM-SIMPLE-EVALS is an internal evaluation toolset for large language models developed by Z.ai, based on OpenAI's [simple-evals](https://github.com/openai/simple-evals) project. We have open-sourced it to allow the community to reproduce the performance of Z.ai's officially released GLM-4.5 model on various evaluation metrics.
 
 ## Supported Evaluation Tasks
 
 Currently, this repository supports the following evaluation tasks, covering multiple domains such as reasoning, coding, and mathematics:
 
-- AIME24
+- AIME
 - GPQA
 - HLE
 - LiveCodeBench
@@ -82,7 +82,7 @@ python3 evaluate.py \
 ```
 
 #### 3. Other Evaluation Tasks
-For other evaluation tasks (AIME24, GPQA, MATH 500, SciCode, MMLU Pro), the verification model uses `Meta-Llama-3.1-70B-Instruct`. Execute the following command to perform the evaluation:
+For other evaluation tasks (AIME, GPQA, MATH 500, SciCode, MMLU Pro), the verification model uses `Meta-Llama-3.1-70B-Instruct`. Execute the following command to perform the evaluation:
 ```bash
 python3 evaluate.py \
     --model_name "glm-4.5" \

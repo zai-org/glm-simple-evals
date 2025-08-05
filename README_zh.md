@@ -6,7 +6,7 @@ GLM-SIMPLE-EVALS 是智谱AI内部使用的大模型评测工具集，基于 Ope
 
 目前，本仓库支持以下评测任务，涵盖推理、代码、数学等多个领域：
 
-- AIME24
+- AIME
 - GPQA
 - HLE
 - LiveCodeBench
@@ -80,7 +80,7 @@ python3 evaluate.py \
 
 #### 3. 其他评测任务
 
-对于其他评测任务（AIME24、GPQA、MATH 500、SciCode、MMLU Pro），校验模型采用 `Meta-Llama-3.1-70B-Instruct`。执行以下命令进行评测：
+对于其他评测任务（AIME、GPQA、MATH 500、SciCode、MMLU Pro），校验模型采用 `Meta-Llama-3.1-70B-Instruct`。执行以下命令进行评测：
 
 ```bash
 python3 evaluate.py \
