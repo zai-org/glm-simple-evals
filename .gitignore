@@ -6,10 +6,11 @@ result
 data/livecodebench
 data/scicode
 _scripts
-.log
+*.log
 test
 logs
 local/
 eval_results/
 eval.sh
 test.sh
+data

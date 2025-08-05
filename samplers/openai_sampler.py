@@ -57,7 +57,8 @@ class OpenAISampler(SamplerBase):
         top_p = top_p if top_p > 0 else 0.95
 
         final = ""
-        for _ in range(200):
+        reasoning = ""
+        for _ in range(50):
             try:
                 chat_completion_res = self.client.chat.completions.create(
                     model=self.model,
@@ -67,6 +68,8 @@ class OpenAISampler(SamplerBase):
                     temperature=temperature,
                 )
                 for chunk in chat_completion_res:
+                    if chunk.choices[0].delta.reasoning_content:
+                        reasoning += chunk.choices[0].delta.reasoning_content
                     if chunk.choices[0].delta.content:
                         final += chunk.choices[0].delta.content
                 break
@@ -76,19 +79,17 @@ class OpenAISampler(SamplerBase):
                 time.sleep(5)
                 continue
 
-        if final == "":
+        if final == "" and reasoning == "":
             print(
-                f"failed in get_resp for 50 times, last exception: {e if 'e' in locals() else ''}"
+                f"failed in get_resp_stream for 50 times, last exception: {e if 'e' in locals() else ''}"
             )
             return ""
 
         content = ""
-        if "</think>" in final:
-            content = final.split("</think>")[-1].strip()
-            if not content:
-                content = final[-512:].strip()
+        if final:
+            content = final
         else:
-            content = final[-512:].strip()
+            content = reasoning[:-512].strip() if reasoning else ""
 
         return content
 

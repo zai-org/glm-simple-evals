@@ -181,7 +181,7 @@ class MathEval(Eval):
         df = pandas.read_json(os.path.join(data_dir, "math/MATH500.jsonl"), lines=True)
         examples = [row.to_dict() for _, row in df.iterrows()]
         examples = examples * n_repeats
-        if num_examples:
+        if num_examples > 0:
             examples = random.Random(0).sample(examples, num_examples)
         self.examples = examples
         self.equality_checker = equality_checker

@@ -20,7 +20,7 @@ CHECEKR_MODEL_NAME="The checker model's name"  # "Meta-Llama-3.1-70B-Instruct" o
 SAVE_DIR="The save path of the evaluation results"
 PROC_NUM=60 # The number of processes to run the evaluation
 
-MAX_NEW_TOKENS=65536 # The max new tokens of the evaluation
+MAX_NEW_TOKENS=81920 # The max new tokens of the evaluation
 
 python3 evaluate.py \
 --model_name $MODEL_NAME \
