@@ -22,7 +22,21 @@ GLM-SIMPLE-EVALS 是智谱AI内部使用的大模型评测工具集，基于 Ope
 
 ## 快速开始
 
-我们提供了 `eval_example.sh` 示例脚本，您只需配置其中的 `api_key` 和其他必要参数（如模型地址、校验模型地址等）即可开始评测。
+我们提供了 `eval_example.sh` 示例脚本，您只需配置其中的 `api_key` 和其他必要参数（如模型地址、校验模型地址等），并下载完所需数据即可开始评测。
+
+### 环境配置
+
+我们建议使用`python==3.10`环境。并运行如下命令配置该仓库所必需的环境依赖。
+
+```bash
+pip install -r requirements.txt
+```
+
+### 评测数据下载指南
+
+1. 下载 [glm-simple-evals-dataset](https://huggingface.co/datasets/zai-org/glm-simple-evals-dataset)，并将其放置在 `./data` 目录下。
+
+2. 下载 SciCode 所需测试用例，该数据集来源于 [SciCode 官方仓库](https://github.com/scicode-bench/SciCode/tree/main)。请从 [Google Drive 链接](https://drive.google.com/drive/folders/1W5GZW6_bdiDAiipuFMqdUhvUaHIj6-pR?usp=drive_link) 下载测试数据，并将其放置在 `./data/scicode/test_data.h5`。**注意**：在使用该数据集时，请遵守其原始仓库中规定的许可证条款和使用条件。
 
 ### 评测任务使用指南
 
@@ -39,7 +53,7 @@ python3 evaluate.py \
     --tasks hle \
     --proc_num 60 \
     --auto_extract_answer \
-    --max_new_tokens 65536 \
+    --max_new_tokens 81920 \
     --checker_model_name "gpt-4o" \
     --checker_url "xxxx" \ # 如果为空，则指向OpenAI官方接口
     --checker_api_key "xxxx" \
@@ -60,7 +74,7 @@ python3 evaluate.py \
     --lcb_date "2407_2501" \
     --proc_num 60 \
     --auto_extract_answer \
-    --max_new_tokens 65536 \
+    --max_new_tokens 81920 \
     --stream \
 ```
 
@@ -79,7 +93,7 @@ python3 evaluate.py \
     --checker_model_name "Meta-Llama-3.1-70B-Instruct" \
     --checker_url "xxxxx" \
     --auto_extract_answer \
-    --max_new_tokens 65536 \
+    --max_new_tokens 81920 \
     --stream \
 ```
 

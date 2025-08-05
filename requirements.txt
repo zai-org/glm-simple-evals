@@ -1,5 +1,5 @@
 datasets==3.1.0
-numpy==2.3.2
+numpy==1.26.4
 openai==1.98.0
 pandas==2.3.1
 pyext==0.7
@@ -7,4 +7,4 @@ pylatexenc==2.10
 git+https://github.com/scicode-bench/SciCode.git#egg=scicode
 sympy==1.13.1
 tqdm==4.67.0
-zai==0.0.2
+zai-sdk==0.0.2
