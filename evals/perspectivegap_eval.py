@@ -13,8 +13,8 @@ PROMPT_WRITING = "prompt_writing"
 TASKS = (ROLE_ASSIGNMENT, PROMPT_WRITING)
 INSTALL_HINT = (
     "PerspectiveGap scoring is required for this evaluation. Install it with "
-    "`pip install 'perspective-gap @ git+https://github.com/WhymustIhaveaname/PerspectiveGap.git'` "
-    "or `uv pip install 'perspective-gap @ git+https://github.com/WhymustIhaveaname/PerspectiveGap.git'`."
+    "`pip install 'perspective-gap @ git+https://github.com/WhymustIhaveaname/PerspectiveGap.git@9c6921b3337ff3e6a6a453f68d117a8c1663135e'` "
+    "or `uv pip install 'perspective-gap @ git+https://github.com/WhymustIhaveaname/PerspectiveGap.git@9c6921b3337ff3e6a6a453f68d117a8c1663135e'`."
 )
 
 
@@ -47,7 +47,15 @@ def load_examples(data_dir: str = "data") -> list[dict[str, Any]]:
             "Install `datasets` or place PerspectiveGap data at "
             "<data_dir>/perspective_gap/evaluations.jsonl."
         ) from exc
-    return list(load_dataset(DATASET_ID, split="test"))
+
+    try:
+        return list(load_dataset(DATASET_ID, split="test"))
+    except Exception as exc:
+        raise RuntimeError(
+            f"Could not load PerspectiveGap data from {DATASET_ID}. Place the "
+            "released JSONL at <data_dir>/perspective_gap/evaluations.jsonl or "
+            "pass data_dir as a JSONL file."
+        ) from exc
 
 
 def _prompt_field(task: str) -> str:
@@ -113,7 +121,9 @@ def process_func(sampler: SamplerBase, task: str, row: dict[str, Any]):
 
     metrics = score_result.get("metrics") or {}
     counts = score_result.get("counts") or {}
-    strict_pass = float(metrics.get("strict_pass", float(bool(score_result.get("pass")))))
+    strict_pass = float(
+        metrics.get("strict_pass", float(bool(score_result.get("pass"))))
+    )
     score = strict_pass * 100.0
     single_result = SingleEvalResult(score=score, metrics=metrics)
     response_row = {
@@ -139,7 +149,8 @@ def aggregate_results(results: list[SingleEvalResult]) -> EvalResult:
     score = sum(result.score or 0.0 for result in results) / len(results)
     metric_names = sorted({name for result in results for name in result.metrics})
     metrics = {
-        name: sum(float(result.metrics.get(name, 0.0)) for result in results) / len(results)
+        name: sum(float(result.metrics.get(name, 0.0)) for result in results)
+        / len(results)
         for name in metric_names
     }
     return EvalResult(score=score, metrics=metrics)
@@ -158,7 +169,9 @@ class PerspectiveGapEval(Eval):
         _load_scoring_module()
         examples = load_examples(data_dir)
         if num_examples is not None and num_examples > 0:
-            examples = random.Random(0).sample(examples, min(len(examples), num_examples))
+            examples = random.Random(0).sample(
+                examples, min(len(examples), num_examples)
+            )
         self.task = task
         self.examples = examples
         self.proc_num = proc_num

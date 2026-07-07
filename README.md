@@ -47,7 +47,7 @@ pip install -r requirements.txt
 
 2. Download SciCode test cases from the [SciCode official repository](https://github.com/scicode-bench/SciCode/tree/main). Download the test data from the [Google Drive link](https://drive.google.com/drive/folders/1W5GZW6_bdiDAiipuFMqdUhvUaHIj6-pR?usp=drive_link) and place it at `./data/scicode/test_data.h5`. **Note**: Please comply with the license terms and usage conditions specified in the original repository when using this dataset.
 
-3. For PerspectiveGap, install the official scorer with `pip install 'perspective-gap @ git+https://github.com/WhymustIhaveaname/PerspectiveGap.git'`. If no local file is present, the evaluator loads [`sun1245/PerspectiveGap`](https://huggingface.co/datasets/sun1245/PerspectiveGap) through the `datasets` library. For offline runs, place the official JSONL file at `./data/perspective_gap/evaluations.jsonl`.
+3. For PerspectiveGap, `requirements.txt` includes the official scorer pinned to commit `9c6921b3337ff3e6a6a453f68d117a8c1663135e`. To install it separately, use `pip install 'perspective-gap @ git+https://github.com/WhymustIhaveaname/PerspectiveGap.git@9c6921b3337ff3e6a6a453f68d117a8c1663135e'`. If no local file is present, the evaluator loads [`sun1245/PerspectiveGap`](https://huggingface.co/datasets/sun1245/PerspectiveGap) through the `datasets` library. For offline runs, place the official JSONL file at `./data/perspective_gap/evaluations.jsonl`.
 
 ### Usage Guide
 
@@ -60,7 +60,7 @@ python3 evaluate.py \
     --model_name "glm-4.6" \
     --backbone "zai" \
     --zai_api_key "xxxxxx" \
-    --save_dir "/temp/eval_results" \
+    --save_dir "./eval_results" \
     --tasks hle \
     --proc_num 60 \
     --auto_extract_answer \
@@ -80,7 +80,7 @@ python3 evaluate.py \
     --model_name "glm-4.6" \
     --backbone "zai" \
     --zai_api_key "xxxxxx" \
-    --save_dir "/temp/eval_results" \
+    --save_dir "./eval_results" \
     --tasks lcb \
     --lcb_date "2407_2501" \
     --proc_num 60 \
@@ -99,7 +99,7 @@ python3 evaluate.py \
     --model_name "glm-4.6" \
     --backbone "zai" \
     --zai_api_key "xxxxxx" \
-    --save_dir "/temp/eval_results" \
+    --save_dir "./eval_results" \
     --tasks aime2024 \  # gpqa math500 mmlu_pro scicode
     --proc_num 60 \
     --checker_model_name "Meta-Llama-3.1-70B-Instruct" \
@@ -118,7 +118,7 @@ python3 evaluate.py \
     --model_name "glm-4.6" \
     --backbone "zai" \
     --zai_api_key "xxxxxx" \
-    --save_dir "/temp/eval_results" \
+    --save_dir "./eval_results" \
     --tasks role_assignment prompt_writing \
     --proc_num 20 \
     --max_new_tokens 8192 \
