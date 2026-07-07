@@ -8,3 +8,4 @@ git+https://github.com/scicode-bench/SciCode.git#egg=scicode
 sympy==1.13.1
 tqdm==4.67.0
 zai-sdk==0.0.2
+perspective-gap @ git+https://github.com/WhymustIhaveaname/PerspectiveGap.git

@@ -15,6 +15,7 @@ Currently supports the following evaluation benchmarks, covering reasoning, codi
 - MATH 500
 - SciCode
 - MMLU Pro
+- PerspectiveGap (`role_assignment`, `prompt_writing`)
 
 ## Model Integration
 
@@ -45,6 +46,8 @@ pip install -r requirements.txt
 1. Download the [glm-simple-evals-dataset](https://huggingface.co/datasets/zai-org/glm-simple-evals-dataset) and place it in the `./data` directory.
 
 2. Download SciCode test cases from the [SciCode official repository](https://github.com/scicode-bench/SciCode/tree/main). Download the test data from the [Google Drive link](https://drive.google.com/drive/folders/1W5GZW6_bdiDAiipuFMqdUhvUaHIj6-pR?usp=drive_link) and place it at `./data/scicode/test_data.h5`. **Note**: Please comply with the license terms and usage conditions specified in the original repository when using this dataset.
+
+3. For PerspectiveGap, either allow the evaluator to load [`sun1245/PerspectiveGap`](https://huggingface.co/datasets/sun1245/PerspectiveGap) through `datasets`, or place the official JSONL file at `./data/perspective_gap/evaluations.jsonl`. Install the official scorer with `pip install 'perspective-gap @ git+https://github.com/WhymustIhaveaname/PerspectiveGap.git'`.
 
 ### Usage Guide
 
@@ -105,6 +108,24 @@ python3 evaluate.py \
     --max_new_tokens 128000 \
     --stream \
 ```
+
+#### 4. PerspectiveGap
+
+PerspectiveGap provides two community reference tasks for multi-agent orchestration prompting: `role_assignment` and `prompt_writing`. These tasks use the deterministic official `perspective_gap.scoring` metrics and do not require a checker model.
+
+```bash
+python3 evaluate.py \
+    --model_name "glm-4.6" \
+    --backbone "zai" \
+    --zai_api_key "xxxxxx" \
+    --save_dir "/temp/eval_results" \
+    --tasks role_assignment prompt_writing \
+    --proc_num 20 \
+    --max_new_tokens 8192 \
+    --stream
+```
+
+For OpenAI-compatible endpoints, use `--backbone openai`, `--openai_api_key`, and `--openai_base_url` as usual.
 
 ## Parameter Reference
 

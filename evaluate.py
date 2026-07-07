@@ -12,6 +12,7 @@ from evals.livecodebench_eval import LiveCodeBenchEval
 from evals.scicode_eval import SciCodeEval
 from evals.mmlu_pro_eval import MMLUProEval
 from evals.hle_eval import HLEEval
+from evals.perspectivegap_eval import PerspectiveGapEval
 
 from samplers.openai_sampler import OpenAISampler
 from samplers.zai_sampler import ZaiSampler
@@ -263,6 +264,20 @@ if __name__ == "__main__":
         "hle": partial(
             HLEEval,
             equality_checker=equality_checker,
+            num_examples=5 if debug else None,
+            data_dir=args.data_dir,
+            proc_num=args.proc_num,
+        ),
+        "role_assignment": partial(
+            PerspectiveGapEval,
+            task="role_assignment",
+            num_examples=5 if debug else None,
+            data_dir=args.data_dir,
+            proc_num=args.proc_num,
+        ),
+        "prompt_writing": partial(
+            PerspectiveGapEval,
+            task="prompt_writing",
             num_examples=5 if debug else None,
             data_dir=args.data_dir,
             proc_num=args.proc_num,

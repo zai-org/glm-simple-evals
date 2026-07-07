@@ -13,6 +13,7 @@ GLM-Simple-Evals 是智谱 AI 内部使用的大语言模型评测工具集，�
 - MATH 500
 - SciCode
 - MMLU Pro
+- PerspectiveGap（`role_assignment`、`prompt_writing`）
 
 ## 模型接入方式
 
@@ -42,6 +43,8 @@ pip install -r requirements.txt
 1. 下载 [glm-simple-evals-dataset](https://huggingface.co/datasets/zai-org/glm-simple-evals-dataset)，并将其放置在 `./data` 目录下。
 
 2. 下载 SciCode 所需测试用例，该数据集来源于 [SciCode 官方仓库](https://github.com/scicode-bench/SciCode/tree/main)。请从 [Google Drive 链接](https://drive.google.com/drive/folders/1W5GZW6_bdiDAiipuFMqdUhvUaHIj6-pR?usp=drive_link) 下载测试数据，并将其放置在 `./data/scicode/test_data.h5`。**注意**：在使用该数据集时，请遵守其原始仓库中规定的许可证条款和使用条件。
+
+3. 对于 PerspectiveGap，可让评测器通过 `datasets` 加载 [`sun1245/PerspectiveGap`](https://huggingface.co/datasets/sun1245/PerspectiveGap)，也可以将官方 JSONL 文件放到 `./data/perspective_gap/evaluations.jsonl`。请安装官方评分器：`pip install 'perspective-gap @ git+https://github.com/WhymustIhaveaname/PerspectiveGap.git'`。
 
 ### 使用指南
 
@@ -102,6 +105,24 @@ python3 evaluate.py \
     --max_new_tokens 128000 \
     --stream \
 ```
+
+#### 4. PerspectiveGap
+
+PerspectiveGap 提供两个 multi-agent orchestration prompting 的社区参考任务：`role_assignment` 和 `prompt_writing`。这两个任务使用官方 `perspective_gap.scoring` 的确定性评分器，不需要额外校验模型。
+
+```bash
+python3 evaluate.py \
+    --model_name "glm-4.6" \
+    --backbone "zai" \
+    --zai_api_key "xxxxxx" \
+    --save_dir "/temp/eval_results" \
+    --tasks role_assignment prompt_writing \
+    --proc_num 20 \
+    --max_new_tokens 8192 \
+    --stream
+```
+
+若使用 OpenAI 兼容接口，请照常设置 `--backbone openai`、`--openai_api_key` 和 `--openai_base_url`。
 
 ## 参数说明
 
