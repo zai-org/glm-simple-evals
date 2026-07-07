@@ -44,7 +44,7 @@ pip install -r requirements.txt
 
 2. 下载 SciCode 所需测试用例，该数据集来源于 [SciCode 官方仓库](https://github.com/scicode-bench/SciCode/tree/main)。请从 [Google Drive 链接](https://drive.google.com/drive/folders/1W5GZW6_bdiDAiipuFMqdUhvUaHIj6-pR?usp=drive_link) 下载测试数据，并将其放置在 `./data/scicode/test_data.h5`。**注意**：在使用该数据集时，请遵守其原始仓库中规定的许可证条款和使用条件。
 
-3. PerspectiveGap：请先安装官方评分器：`pip install 'perspective-gap @ git+https://github.com/WhymustIhaveaname/PerspectiveGap.git'`。如未提供本地文件，评测器会通过 `datasets` 加载 [`sun1245/PerspectiveGap`](https://huggingface.co/datasets/sun1245/PerspectiveGap)；离线运行时，可将官方 JSONL 放到 `./data/perspective_gap/evaluations.jsonl`。
+3. PerspectiveGap：先安装官方评分器：`pip install 'perspective-gap @ git+https://github.com/WhymustIhaveaname/PerspectiveGap.git'`。如果没有本地文件，评测器会通过 `datasets` 库加载 [`sun1245/PerspectiveGap`](https://huggingface.co/datasets/sun1245/PerspectiveGap)；离线运行时，可将官方 JSONL 放到 `./data/perspective_gap/evaluations.jsonl`。
 
 ### 使用指南
 
@@ -108,7 +108,7 @@ python3 evaluate.py \
 
 #### 4. PerspectiveGap
 
-[PerspectiveGap](https://arxiv.org/abs/2606.08878) 提供两个社区参考任务，用于评测多智能体编排提示和角色级上下文路由：`role_assignment` 和 `prompt_writing`。这两个任务使用官方 `perspective_gap.scoring` 确定性评分器，不需要校验模型。
+这里以社区参考任务的形式接入 [PerspectiveGap](https://arxiv.org/abs/2606.08878) 的两个任务，用于评测多智能体编排提示和角色级上下文路由：`role_assignment` 和 `prompt_writing`。这两个任务使用官方 `perspective_gap.scoring` 确定性评分器，不需要校验模型。
 
 ```bash
 python3 evaluate.py \

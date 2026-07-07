@@ -47,7 +47,7 @@ pip install -r requirements.txt
 
 2. Download SciCode test cases from the [SciCode official repository](https://github.com/scicode-bench/SciCode/tree/main). Download the test data from the [Google Drive link](https://drive.google.com/drive/folders/1W5GZW6_bdiDAiipuFMqdUhvUaHIj6-pR?usp=drive_link) and place it at `./data/scicode/test_data.h5`. **Note**: Please comply with the license terms and usage conditions specified in the original repository when using this dataset.
 
-3. For PerspectiveGap, install the official scorer with `pip install 'perspective-gap @ git+https://github.com/WhymustIhaveaname/PerspectiveGap.git'`. If no local file is present, the evaluator loads [`sun1245/PerspectiveGap`](https://huggingface.co/datasets/sun1245/PerspectiveGap) through `datasets`. For offline runs, place the official JSONL file at `./data/perspective_gap/evaluations.jsonl`.
+3. For PerspectiveGap, install the official scorer with `pip install 'perspective-gap @ git+https://github.com/WhymustIhaveaname/PerspectiveGap.git'`. If no local file is present, the evaluator loads [`sun1245/PerspectiveGap`](https://huggingface.co/datasets/sun1245/PerspectiveGap) through the `datasets` library. For offline runs, place the official JSONL file at `./data/perspective_gap/evaluations.jsonl`.
 
 ### Usage Guide
 
@@ -111,7 +111,7 @@ python3 evaluate.py \
 
 #### 4. PerspectiveGap
 
-[PerspectiveGap](https://arxiv.org/abs/2606.08878) adds two community reference tasks for multi-agent orchestration prompting and role-specific context routing: `role_assignment` and `prompt_writing`. These tasks use the official deterministic `perspective_gap.scoring` scorer and do not require a checker model.
+[PerspectiveGap](https://arxiv.org/abs/2606.08878) is included here as two community reference tasks for multi-agent orchestration prompting and role-specific context routing: `role_assignment` and `prompt_writing`. The tasks use the official deterministic `perspective_gap.scoring` scorer and do not require a checker model.
 
 ```bash
 python3 evaluate.py \
