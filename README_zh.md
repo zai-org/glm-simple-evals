@@ -44,13 +44,13 @@ pip install -r requirements.txt
 
 2. 下载 SciCode 所需测试用例，该数据集来源于 [SciCode 官方仓库](https://github.com/scicode-bench/SciCode/tree/main)。请从 [Google Drive 链接](https://drive.google.com/drive/folders/1W5GZW6_bdiDAiipuFMqdUhvUaHIj6-pR?usp=drive_link) 下载测试数据，并将其放置在 `./data/scicode/test_data.h5`。**注意**：在使用该数据集时，请遵守其原始仓库中规定的许可证条款和使用条件。
 
-3. 对于 PerspectiveGap，可让评测器通过 `datasets` 加载 [`sun1245/PerspectiveGap`](https://huggingface.co/datasets/sun1245/PerspectiveGap)，也可以将官方 JSONL 文件放到 `./data/perspective_gap/evaluations.jsonl`。请安装官方评分器：`pip install 'perspective-gap @ git+https://github.com/WhymustIhaveaname/PerspectiveGap.git'`。
+3. PerspectiveGap：请先安装官方评分器：`pip install 'perspective-gap @ git+https://github.com/WhymustIhaveaname/PerspectiveGap.git'`。如未提供本地文件，评测器会通过 `datasets` 加载 [`sun1245/PerspectiveGap`](https://huggingface.co/datasets/sun1245/PerspectiveGap)；离线运行时，可将官方 JSONL 放到 `./data/perspective_gap/evaluations.jsonl`。
 
 ### 使用指南
 
 #### 1. HLE
 
-在 HLE 评测任务中，需要使用 `gpt-4o` 对结果进行校验。执行以下命令进行评测：
+在 HLE 评测任务中，需要使用 `gpt-4o` 对结果进行校验。如不设置 `--checker_url`，默认使用 OpenAI 官方接口。执行以下命令进行评测：
 
 ```bash
 python3 evaluate.py \
@@ -63,7 +63,7 @@ python3 evaluate.py \
     --auto_extract_answer \
     --max_new_tokens 128000 \
     --checker_model_name "gpt-4o" \
-    --checker_url "xxxx" \ # 如果为空，则指向OpenAI官方接口
+    --checker_url "xxxx" \
     --checker_api_key "xxxx" \
     --stream \
 ```
@@ -108,7 +108,7 @@ python3 evaluate.py \
 
 #### 4. PerspectiveGap
 
-PerspectiveGap 提供两个 multi-agent orchestration prompting 的社区参考任务：`role_assignment` 和 `prompt_writing`。这两个任务使用官方 `perspective_gap.scoring` 的确定性评分器，不需要额外校验模型。
+[PerspectiveGap](https://arxiv.org/abs/2606.08878) 提供两个社区参考任务，用于评测多智能体编排提示和角色级上下文路由：`role_assignment` 和 `prompt_writing`。这两个任务使用官方 `perspective_gap.scoring` 确定性评分器，不需要校验模型。
 
 ```bash
 python3 evaluate.py \
@@ -129,24 +129,24 @@ python3 evaluate.py \
 以下是评测脚本中常用参数的说明：
 
 - `--model_name`: 待评测的模型名称
-- `--backbone`: 模型调用方式，"zai"（智谱官方SDK）或 "openai"(其他兼容OpenAI接口的方式)
-- `--zai_api_key`: 智谱BigModel平台的API Key
-- `--openai_api_key`: 其他兼容OpenAI接口的供应商的API Key
-- `--openai_base_url`: 其他兼容OpenAI接口的供应商的Url
+- `--backbone`: 模型调用方式，`zai`（智谱官方 SDK）或 `openai`（OpenAI 兼容接口）
+- `--zai_api_key`: 智谱 BigModel 平台 API Key
+- `--openai_api_key`: OpenAI 兼容服务的 API Key
+- `--openai_base_url`: OpenAI 兼容服务的 API 地址
 - `--save_dir`: 评测结果保存目录
 - `--tasks`: 评测任务
 - `--proc_num`: 并发进程数
 - `--auto_extract_answer`: 自动提取答案
-- `--max_new_tokens`: 生成文本的最大token数
+- `--max_new_tokens`: 生成文本的最大 Token 数
 - `--checker_model_name`: 校验模型名称
-- `--checker_url`: 校验模型API地址
-- `--checker_api_key`: 校验模型API密钥
+- `--checker_url`: 校验模型 API 地址
+- `--checker_api_key`: 校验模型 API Key
 - `--stream`: 是否使用流式输出
-- `--lcb_date`: LiveCodeBench评测的测试日期范围，可选 '2407_2501' 或 'v6'
+- `--lcb_date`: LiveCodeBench 评测的测试日期范围，可选 `2407_2501` 或 `v6`
 
 ## 注意事项
 
-1. 请确保您已获取必要的API密钥，并已正确配置在评测脚本中。
+1. 请确保已获取必要的 API Key，并在评测脚本中正确配置。
 2. 根据不同的评测任务，可能需要配置特定的校验模型。
 3. 评测结果将保存在指定的 `--save_dir` 目录中。
-4. 请根据您的硬件资源适当调整 `--proc_num` 参数，以获得最佳的评测效率。
+4. 请根据硬件资源和接口限流适当调整 `--proc_num` 参数。
