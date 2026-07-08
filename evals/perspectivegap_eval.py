@@ -5,6 +5,7 @@ from functools import partial
 from pathlib import Path
 from typing import Any, Optional
 
+from evals import common
 from utils.types import Eval, EvalResult, SamplerBase, SingleEvalResult
 
 DATASET_ID = "sun1245/PerspectiveGap"
@@ -142,20 +143,6 @@ def process_func(sampler: SamplerBase, task: str, row: dict[str, Any]):
     return single_result, response_row
 
 
-def aggregate_results(results: list[SingleEvalResult]) -> EvalResult:
-    if not results:
-        return EvalResult(score=0.0, metrics={})
-
-    score = sum(result.score or 0.0 for result in results) / len(results)
-    metric_names = sorted({name for result in results for name in result.metrics})
-    metrics = {
-        name: sum(float(result.metrics.get(name, 0.0)) for result in results)
-        / len(results)
-        for name in metric_names
-    }
-    return EvalResult(score=score, metrics=metrics)
-
-
 class PerspectiveGapEval(Eval):
     def __init__(
         self,
@@ -180,8 +167,6 @@ class PerspectiveGapEval(Eval):
         if self.proc_num <= 1:
             results = [process_func(sampler, self.task, row) for row in self.examples]
         else:
-            from evals import common
-
             results = common.map_with_ordered_progress(
                 partial(process_func, sampler, self.task),
                 self.examples,
@@ -191,4 +176,4 @@ class PerspectiveGapEval(Eval):
         response_data = [item[1] for item in results]
         single_results = [item[0] for item in results]
         print(f"PerspectiveGap {self.task} evaluation: {len(single_results)} examples")
-        return aggregate_results(single_results), response_data
+        return common.aggregate_results(single_results), response_data
