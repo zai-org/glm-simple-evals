@@ -34,7 +34,7 @@ class OpenAISampler(SamplerBase):
         self.top_p = top_p
 
     def get_resp(self, message_list, top_p=-1, temperature=-1):
-        temperature = temperature if temperature > 0 else self.temperature
+        temperature = temperature if temperature >= 0 else self.temperature
         top_p = top_p if top_p > 0 else self.top_p
 
         for _ in range(3):
@@ -42,7 +42,7 @@ class OpenAISampler(SamplerBase):
                 chat_completion = self.client.chat.completions.create(
                     messages=message_list,
                     model=self.model,
-                    temperature=self.temperature,
+                    temperature=temperature,
                     max_tokens=self.max_tokens,
                     top_p=top_p,
                 )
@@ -56,7 +56,7 @@ class OpenAISampler(SamplerBase):
         return ""
 
     def get_resp_stream(self, message_list, top_p=-1, temperature=-1):
-        temperature = temperature if temperature > 0 else self.temperature
+        temperature = temperature if temperature >= 0 else self.temperature
         top_p = top_p if top_p > 0 else self.top_p
 
         final = ""
