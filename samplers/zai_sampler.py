@@ -30,15 +30,15 @@ class ZaiSampler(SamplerBase):
         self.top_p = top_p
 
     def get_resp(self, message_list, top_p=-1, temperature=-1):
-        temperature = temperature if temperature > 0 else self.temperature
+        temperature = temperature if temperature >= 0 else self.temperature
         top_p = top_p if top_p > 0 else self.top_p
         for _ in range(3):
             try:
                 chat_completion = self.client.chat.completions.create(
                     messages=message_list,
                     model=self.model,
-                    temperature=self.temperature,
-                    top_p=self.top_p,
+                    temperature=temperature,
+                    top_p=top_p,
                     max_tokens=self.max_tokens,
                 )
                 output = chat_completion.choices[0].message.content
@@ -51,7 +51,7 @@ class ZaiSampler(SamplerBase):
         return ""
 
     def get_resp_stream(self, message_list, top_p=-1, temperature=-1):
-        temperature = temperature if temperature > 0 else self.temperature
+        temperature = temperature if temperature >= 0 else self.temperature
         top_p = top_p if top_p > 0 else self.top_p
         final = ""
         reasoning = ""
