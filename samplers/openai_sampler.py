@@ -79,6 +79,7 @@ class OpenAISampler(SamplerBase):
                 break
             except Exception as e:
                 final = ""
+                reasoning = ""
                 print(f"Exception: {e}\nTraceback: {traceback.format_exc()}")
                 time.sleep(5)
                 continue
